@@ -17,11 +17,11 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # tags and history: ShotLite.csproj stamps the version from git
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 9.0.x
 
@@ -56,14 +56,17 @@ jobs:
       - name: Installer
         shell: pwsh
         run: |
-          # Inno Setup 7 installs to Program Files, version 6 to Program Files (x86); install it if the runner lacks it.
-          function Find-Iscc {
-            @("$env:ProgramFiles\Inno Setup 7\ISCC.exe", "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") |
-              Where-Object { Test-Path $_ } | Select-Object -First 1
+          # Inno Setup 7 has all app languages incl. Chinese; runners ship version 6 and Chocolatey stops at 6.x.
+          # Official release from github.com/jrsoftware/issrc, pinned by SHA-256.
+          $iscc = "$env:ProgramFiles\Inno Setup 7\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            $setup = Join-Path $env:RUNNER_TEMP 'innosetup-7.1.1-x64.exe'
+            Invoke-WebRequest 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe' -OutFile $setup
+            $hash = (Get-FileHash $setup -Algorithm SHA256).Hash
+            if ($hash -ne '8A5A6711C3766A6E5FB74F280BA0E3551E719CE94538D901FDBD1F8F9920B3F0') { throw "Inno Setup checksum mismatch: $hash" }
+            Start-Process $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/ALLUSERS' -Wait
           }
-          $iscc = Find-Iscc
-          if (-not $iscc) { choco install innosetup --no-progress -y; $iscc = Find-Iscc }
-          if (-not $iscc) { throw "ISCC.exe not found" }
+          if (-not (Test-Path $iscc)) { throw "Inno Setup 7 not found at $iscc" }
           Write-Host "Using $iscc"
           & $iscc /Qp "/DVersion=${{ steps.version.outputs.display }}" "/DNumericVersion=${{ steps.version.outputs.number }}" "/DSourceDir=..\out\app" installer\ShotLite.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed with $LASTEXITCODE" }
@@ -72,7 +75,7 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path out/app/* -DestinationPath out/ShotLite-portable.zip
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ShotLite-${{ steps.version.outputs.display }}
           path: |
