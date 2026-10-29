@@ -4,6 +4,10 @@
 
 A lightweight screenshot tool for Windows. It was created as a replacement for the no longer supported **Lightshot 5.5.0.7**. It works the same way (PrtScr → select an area → draw → copy/save), but **without telemetry and without uploading to prntscr.com**.
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="ShotLite editor: selection with arrows, rectangle, black-out, frosted glass and highlighter" width="640">
+</p>
+
 ## Download
 
 - **Installer (recommended):** [ShotLite-install.exe](https://github.com/otazniksk/ShotLite/releases/latest/download/ShotLite-install.exe). Installs for the current user, no administrator rights needed.

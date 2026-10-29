@@ -4,6 +4,10 @@
 
 Ľahký nástroj na screenshoty pre Windows. Vznikol ako náhrada za už nepodporovaný **Lightshot 5.5.0.7**. Má rovnaký spôsob práce (PrtScr → výber oblasti → kreslenie → kopírovať/uložiť), ale **bez telemetrie a bez nahrávania na prntscr.com**.
 
+<p align="center">
+  <img src="docs/screenshot.png" alt="Editor ShotLite: výber so šípkami, obdĺžnikom, začiernením, matným sklom a zvýrazňovačom" width="640">
+</p>
+
 ## Stiahnutie
 
 - **Inštalátor (odporúčaný):** [ShotLite-install.exe](https://github.com/otazniksk/ShotLite/releases/latest/download/ShotLite-install.exe). Inštaluje sa pre aktuálneho používateľa a nepotrebuje administrátorské práva.
