@@ -1,11 +1,11 @@
-# Push to main / pull request: build the installer and the portable zip as workflow artifacts (for testing).
-# Tag vX.Y.Z:                  the same, plus a GitHub Release with both files.
+# Tag vX.Y.Z: build the installer and the portable zip and publish them as a GitHub Release.
 #   git tag v1.0.0 && git push origin v1.0.0
+# Pull request / manual run (Actions -> Run workflow): the same build as workflow artifacts, no release.
+# Plain pushes to main don't build.
 name: Build
 
 on:
   push:
-    branches: [main]
     tags: ["v*.*.*"]
   pull_request:
   workflow_dispatch:
