@@ -1,0 +1,77 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <RootNamespace>ShotLite</RootNamespace>
+    <AssemblyName>ShotLite</AssemblyName>
+    <!-- Base version for branch builds; a vX.Y.Z tag overrides it (see SetVersionFromGit). -->
+    <Version>1.0.0</Version>
+    <Product>ShotLite</Product>
+    <Authors>Michal Škop</Authors>
+    <Company>Michal Škop</Company>
+    <Copyright>Copyright © 2026 Michal Škop · MIT License</Copyright>
+    <Description>Lightweight screenshot tool inspired by Lightshot, without telemetry.</Description>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <!-- The informational version is composed from git below; don't let the SDK append "+<sha>" itself. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\app.ico" LogicalName="ShotLite.app.ico" />
+    <!-- English is embedded as the fallback; every languages\*.json ships next to the exe. -->
+    <EmbeddedResource Include="languages\en-US.json" LogicalName="ShotLite.languages.en-US.json" />
+    <None Include="languages\*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <!--
+    Version from git (shown in the About dialog):
+      HEAD on a tag v1.2.3      -> Version 1.2.3, InformationalVersion "1.2.3"
+      HEAD on a branch          -> InformationalVersion "<Version>-<branch>+<sha>[-dirty]"
+      no git / not a repository -> the <Version> above
+    "git -C" because cmd.exe cannot use a \\wsl.localhost working directory; safe.directory because
+    Windows git refuses repositories owned by the WSL user. Pass -p:GitVersion=false to skip.
+  -->
+  <Target Name="SetVersionFromGit" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo" Condition="'$(GitVersion)' != 'false'">
+    <PropertyGroup>
+      <_Git>git -c safe.directory=* -C "$(MSBuildProjectDirectory)"</_Git>
+    </PropertyGroup>
+    <Exec Command="$(_Git) describe --tags --exact-match HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true"
+          StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitTag" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitTagExit" />
+    </Exec>
+    <Exec Command="$(_Git) rev-parse --abbrev-ref HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true"
+          StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitBranch" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitBranchExit" />
+    </Exec>
+    <Exec Command="$(_Git) rev-parse --short HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true"
+          StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitSha" />
+    </Exec>
+    <Exec Command="$(_Git) status --porcelain" ConsoleToMSBuild="true" IgnoreExitCode="true"
+          StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitStatus" />
+    </Exec>
+
+    <PropertyGroup>
+      <_TagVersion Condition="'$(_GitTagExit)' == '0'">$([System.Text.RegularExpressions.Regex]::Match('$(_GitTag)', '^v?(\d+\.\d+\.\d+)$').Groups[1].Value)</_TagVersion>
+      <_GitDirty Condition="'$(_GitStatus)' != ''">-dirty</_GitDirty>
+      <!-- Branch names may contain "/" (feature/x); SemVer allows only [0-9A-Za-z-.]. -->
+      <_BranchLabel>$([System.Text.RegularExpressions.Regex]::Replace('$(_GitBranch)', '[^0-9A-Za-z.-]', '-'))</_BranchLabel>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(_TagVersion)' != ''">
+      <Version>$(_TagVersion)</Version>
+      <InformationalVersion>$(_TagVersion)$(_GitDirty)</InformationalVersion>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(_TagVersion)' == '' And '$(_GitBranchExit)' == '0'">
+      <InformationalVersion>$(Version)-$(_BranchLabel)+$(_GitSha)$(_GitDirty)</InformationalVersion>
+    </PropertyGroup>
+  </Target>
+
+</Project>

@@ -1,0 +1,93 @@
+# Push to main / pull request: build the installer and the portable zip as workflow artifacts (for testing).
+# Tag vX.Y.Z:                  the same, plus a GitHub Release with both files.
+#   git tag v1.0.0 && git push origin v1.0.0
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # gh release create
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags and history: ShotLite.csproj stamps the version from git
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            if ($env:GITHUB_REF_NAME -notmatch '^v(\d+\.\d+\.\d+)$') { throw "Tag '$env:GITHUB_REF_NAME' is not vX.Y.Z" }
+            $number = $Matches[1]
+            $display = $number
+          } else {
+            [xml]$project = Get-Content src/ShotLite/ShotLite.csproj
+            $number = @($project.Project.PropertyGroup.Version | Where-Object { $_ })[0]
+            $branch = $env:GITHUB_HEAD_REF ? $env:GITHUB_HEAD_REF : $env:GITHUB_REF_NAME
+            $display = "$number-$($branch -replace '[^0-9A-Za-z.-]', '-')+$($env:GITHUB_SHA.Substring(0, 7))"
+          }
+          "number=$number" >> $env:GITHUB_OUTPUT
+          "display=$display" >> $env:GITHUB_OUTPUT
+          Write-Host "Version $display"
+
+      # Self-contained: users need no .NET runtime. The languages folder stays next to the exe.
+      - name: Publish
+        run: >
+          dotnet publish src/ShotLite/ShotLite.csproj -c Release -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=none
+          -o out/app
+
+      - name: Installer
+        shell: pwsh
+        run: |
+          # Inno Setup 7 installs to Program Files, version 6 to Program Files (x86); install it if the runner lacks it.
+          function Find-Iscc {
+            @("$env:ProgramFiles\Inno Setup 7\ISCC.exe", "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") |
+              Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+          $iscc = Find-Iscc
+          if (-not $iscc) { choco install innosetup --no-progress -y; $iscc = Find-Iscc }
+          if (-not $iscc) { throw "ISCC.exe not found" }
+          Write-Host "Using $iscc"
+          & $iscc /Qp "/DVersion=${{ steps.version.outputs.display }}" "/DNumericVersion=${{ steps.version.outputs.number }}" "/DSourceDir=..\out\app" installer\ShotLite.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with $LASTEXITCODE" }
+
+      - name: Portable zip
+        shell: pwsh
+        run: Compress-Archive -Path out/app/* -DestinationPath out/ShotLite-portable.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ShotLite-${{ steps.version.outputs.display }}
+          path: |
+            out/ShotLite-install.exe
+            out/ShotLite-portable.zip
+          if-no-files-found: error
+
+      - name: Release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$env:GITHUB_REF_NAME"
+          out/ShotLite-install.exe out/ShotLite-portable.zip
+          --title "ShotLite ${{ steps.version.outputs.number }}"
+          --generate-notes
+          --verify-tag
