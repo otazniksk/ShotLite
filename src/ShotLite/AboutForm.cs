@@ -56,12 +56,13 @@ internal sealed class AboutForm : Form
         var ok = new Button
         {
             Text = "OK",
-            DialogResult = DialogResult.OK,
             AutoSize = true,
             MinimumSize = new Size(96, 30),
             Anchor = AnchorStyles.None,
             Margin = new Padding(0, 14, 0, 20),
         };
+        // The dialog is modeless (Show, not ShowDialog), so DialogResult would not close it.
+        ok.Click += (_, _) => Close();
         AddRow(layout, ok);
 
         Controls.Add(layout);
