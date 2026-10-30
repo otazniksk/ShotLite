@@ -81,13 +81,35 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 
 [Registry]
 ; The same value the app writes from its settings (Autostart.cs); the app reads it back on start.
+; An update keeps it as it is: autostart may have been switched off in the app since the install.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#AppName}"; \
-  ValueData: """{app}\{#AppExe}"""; Tasks: autostart; Flags: uninsdeletevalue
+  ValueData: """{app}\{#AppExe}"""; Tasks: autostart; Check: not IsAppUpdate; Flags: uninsdeletevalue
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; An update from inside the app (/relaunch=1) is silent, so the entry above is skipped.
+Filename: "{app}\{#AppExe}"; Flags: nowait; Check: IsAppUpdate
 
 [Code]
+function IsAppUpdate: Boolean;
+begin
+  Result := ExpandConstant('{param:relaunch|0}') = '1';
+end;
+
+function InitializeSetup: Boolean;
+var
+  Waited: Integer;
+begin
+  { The app quits right after starting setup; without the wait the AppMutex check could still see it running. }
+  Waited := 0;
+  while IsAppUpdate and CheckForMutexes('ShotLite.SingleInstance') and (Waited < 15000) do
+  begin
+    Sleep(200);
+    Waited := Waited + 200;
+  end;
+  Result := True;
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   { Autostart may have been switched on later in the app's settings, not by the installer task. }

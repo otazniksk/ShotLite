@@ -17,12 +17,18 @@ internal sealed class ImageActions
 
     private readonly AppSettings _settings;
     private readonly Notifier _notifier;
+    private int _uploads;
 
     public ImageActions(AppSettings settings, Notifier notifier)
     {
         _settings = settings;
         _notifier = notifier;
     }
+
+    /// <summary>Raised on the UI thread when an upload has ended, successfully or not.</summary>
+    public event Action? UploadFinished;
+
+    public bool IsUploading => _uploads > 0;
 
     private bool IsJpeg => _settings.FileFormat == "jpg";
     private string Extension => IsJpeg ? ".jpg" : ".png";
@@ -51,7 +57,7 @@ internal sealed class ImageActions
             Filter = "PNG (*.png)|*.png|JPEG (*.jpg)|*.jpg|BMP (*.bmp)|*.bmp",
             FilterIndex = IsJpeg ? 2 : 1,
             FileName = DefaultFileName() + Extension,
-            InitialDirectory = Directory.Exists(_settings.LastSaveDir) ? _settings.LastSaveDir : EnsureSaveFolder(),
+            InitialDirectory = Directory.Exists(_settings.LastSaveDir) ? _settings.LastSaveDir : EnsureFolder(_settings.ResolvedSaveFolder),
             AddExtension = true,
             DefaultExt = Extension.TrimStart('.'),
             OverwritePrompt = true,
@@ -65,11 +71,38 @@ internal sealed class ImageActions
 
     public string? SaveToFolder(Bitmap image)
     {
-        var folder = EnsureSaveFolder();
-        var path = Path.Combine(folder, DefaultFileName() + Extension);
+        return WriteFile(image, UniquePath(EnsureFolder(_settings.ResolvedSaveFolder), DefaultFileName(), Extension));
+    }
+
+    /// <summary>A free file name in the recordings folder for a new recording.</summary>
+    public string NewRecordingPath(string extension) =>
+        UniquePath(EnsureFolder(_settings.ResolvedRecordFolder), $"Recording_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}", extension);
+
+    /// <summary>Opens the folder or offers it in a notification; an early end is always announced.</summary>
+    /// <param name="interrupted">Why the recording ended early, if it did; announced like the limit.</param>
+    public void NotifyRecordingSaved(string path, bool limitReached, string? interrupted)
+    {
+        bool open = _settings.OpenFolderAfterRecording;
+        if (open)
+            RevealInExplorer(path);
+
+        bool announce = limitReached || interrupted != null;
+        if (open && !announce)
+            return;
+        var text = interrupted != null ? string.Format(Strings.RecordInterrupted, path, interrupted)
+            : string.Format(limitReached ? Strings.RecordLimitReached : Strings.Saved, path);
+        _notifier.Show(text, () => RevealInExplorer(path), force: announce);
+    }
+
+    public void NotifyRecordingFailed(string reason) =>
+        _notifier.Error(string.Format(Strings.RecordFailed, reason));
+
+    private static string UniquePath(string folder, string name, string extension)
+    {
+        var path = Path.Combine(folder, name + extension);
         for (int i = 2; File.Exists(path); i++)
-            path = Path.Combine(folder, $"{DefaultFileName()} ({i}){Extension}");
-        return WriteFile(image, path);
+            path = Path.Combine(folder, $"{name} ({i}){extension}");
+        return path;
     }
 
     public bool Print(Bitmap image, IWin32Window? owner)
@@ -111,6 +144,7 @@ internal sealed class ImageActions
     public async Task UploadAsync(EncodedImage image)
     {
         var upload = _settings.Upload;
+        _uploads++;
         try
         {
             using var content = new MultipartFormDataContent();
@@ -137,6 +171,11 @@ internal sealed class ImageActions
                                        or IndexOutOfRangeException or ExternalException)
         {
             _notifier.Error(string.Format(Strings.UploadFailed, ex.Message));
+        }
+        finally
+        {
+            _uploads--;
+            UploadFinished?.Invoke();
         }
     }
 
@@ -180,9 +219,8 @@ internal sealed class ImageActions
         }
     }
 
-    private string EnsureSaveFolder()
+    private static string EnsureFolder(string folder)
     {
-        var folder = _settings.ResolvedSaveFolder;
         Directory.CreateDirectory(folder);
         return folder;
     }

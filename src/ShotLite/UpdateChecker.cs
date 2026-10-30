@@ -10,8 +10,8 @@ internal sealed record UpdateInfo(Version Version, string Url);
 /// </summary>
 internal static class UpdateChecker
 {
-    public const string ReleasesUrl = "https://github.com/otazniksk/ShotLite/releases/latest";
-    private const string LatestReleaseApi = "https://api.github.com/repos/otazniksk/ShotLite/releases/latest";
+    public static string ReleasesUrl => $"{BuildInfo.RepositoryUrl}/releases/latest";
+    private static string LatestReleaseApi => $"https://api.github.com/repos/{BuildInfo.Repository}/releases/latest";
 
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };
 

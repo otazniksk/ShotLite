@@ -6,7 +6,7 @@ namespace ShotLite;
 
 internal enum Tool { None, Pencil, Line, Arrow, Rectangle, Redact, Marker, Text }
 
-internal enum ToolbarAction { Pencil, Line, Arrow, Rectangle, Redact, Marker, Text, Color, Undo, Upload, Print, Copy, Save, Close }
+internal enum ToolbarAction { Pencil, Line, Arrow, Rectangle, Redact, Marker, Text, Color, Undo, Aspect, Record, Upload, Print, Copy, Save, Close }
 
 internal sealed class ToolbarButton
 {
@@ -57,20 +57,33 @@ internal sealed class CaptureForm : Form
     private Rectangle _verticalBar, _horizontalBar;
     private Rectangle _lastVisual;
     private Rectangle? _hintBounds;
-    private Font? _uiFont, _iconFont, _iconTextFont;
+    private Font? _uiFont, _iconFont, _iconTextFont, _aspectFont;
     private RedactStyle _redactStyle;
     private readonly System.Windows.Forms.Timer _holdTimer = new() { Interval = 350 };
-    private bool _redactPressed;
+    private ToolbarAction? _pressed;
+    private readonly Action<Rectangle>? _onRecord;
+    private readonly bool _recordMode;
+    private readonly List<AspectRatio> _aspectChoices;
+    private AspectRatio? _aspect;
+    private AspectRatio _lastAspect;
 
-    public CaptureForm(Bitmap capture, Rectangle bounds, AppSettings settings, ImageActions actions)
+    /// <param name="onRecord">Starts a recording of a screen rectangle; null where recording isn't supported.</param>
+    /// <param name="recordMode">Opened for recording only: no annotations, and a click takes the whole monitor.</param>
+    public CaptureForm(Bitmap capture, Rectangle bounds, AppSettings settings, ImageActions actions,
+        Action<Rectangle>? onRecord = null, bool recordMode = false)
     {
         _settings = settings;
         _actions = actions;
+        _onRecord = onRecord;
+        _recordMode = recordMode;
+        _aspectChoices = settings.ParsedAspectRatios;
+        _aspect = AspectRatio.TryParse(settings.DefaultAspectRatio, out var aspect) ? aspect : null;
+        _lastAspect = _aspect ?? _aspectChoices.FirstOrDefault(new AspectRatio(9, 16));
         _screenBounds = bounds;
         _color = Color.FromArgb(settings.ColorArgb);
         _penWidth = Math.Clamp(settings.PenWidth, 1, 40);
         _redactStyle = Enum.IsDefined(settings.RedactStyle) ? settings.RedactStyle : RedactStyle.Black;
-        _holdTimer.Tick += (_, _) => OnRedactHold();
+        _holdTimer.Tick += (_, _) => OnButtonHold();
 
         // PArgb is the fastest format for GDI+ to blit to the screen.
         _shot = capture.Clone(new Rectangle(Point.Empty, capture.Size), PixelFormat.Format32bppPArgb);
@@ -88,31 +101,42 @@ internal sealed class CaptureForm : Form
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint
                  | ControlStyles.OptimizedDoubleBuffer | ControlStyles.Opaque, true);
 
-        AddButton(ToolbarAction.Pencil, Strings.ToolPencil, vertical: true);
-        AddButton(ToolbarAction.Line, Strings.ToolLine, vertical: true);
-        AddButton(ToolbarAction.Arrow, Strings.ToolArrow, vertical: true);
-        AddButton(ToolbarAction.Rectangle, Strings.ToolRectangle, vertical: true);
-        AddButton(ToolbarAction.Redact, RedactTooltip(), vertical: true);
-        AddButton(ToolbarAction.Marker, Strings.ToolMarker, vertical: true);
-        AddButton(ToolbarAction.Text, Strings.ToolText, vertical: true);
-        AddButton(ToolbarAction.Color, Strings.ToolColor, vertical: true);
-        AddButton(ToolbarAction.Undo, Strings.ToolUndo, vertical: true);
+        if (!recordMode)
+        {
+            AddButton(ToolbarAction.Pencil, Strings.ToolPencil, vertical: true);
+            AddButton(ToolbarAction.Line, Strings.ToolLine, vertical: true);
+            AddButton(ToolbarAction.Arrow, Strings.ToolArrow, vertical: true);
+            AddButton(ToolbarAction.Rectangle, Strings.ToolRectangle, vertical: true);
+            AddButton(ToolbarAction.Redact, RedactTooltip(), vertical: true);
+            AddButton(ToolbarAction.Marker, Strings.ToolMarker, vertical: true);
+            AddButton(ToolbarAction.Text, Strings.ToolText, vertical: true);
+            AddButton(ToolbarAction.Color, Strings.ToolColor, vertical: true);
+            AddButton(ToolbarAction.Undo, Strings.ToolUndo, vertical: true);
+        }
 
-        if (settings.Upload.IsConfigured)
-            AddButton(ToolbarAction.Upload, Strings.ActionUpload, vertical: false);
-        AddButton(ToolbarAction.Print, Strings.ActionPrint, vertical: false);
-        AddButton(ToolbarAction.Copy, Strings.ActionCopy, vertical: false);
-        AddButton(ToolbarAction.Save, Strings.ActionSave, vertical: false);
+        AddButton(ToolbarAction.Aspect, AspectTooltip(), vertical: false);
+        if (onRecord != null)
+            AddButton(ToolbarAction.Record, RecordTooltip(), vertical: false);
+        if (!recordMode)
+        {
+            if (settings.Upload.IsConfigured)
+                AddButton(ToolbarAction.Upload, Strings.ActionUpload, vertical: false);
+            AddButton(ToolbarAction.Print, Strings.ActionPrint, vertical: false);
+            AddButton(ToolbarAction.Copy, Strings.ActionCopy, vertical: false);
+            AddButton(ToolbarAction.Save, Strings.ActionSave, vertical: false);
+        }
         AddButton(ToolbarAction.Close, Strings.ActionClose, vertical: false);
     }
 
     private bool HasSelection => _selection.Width >= 3 && _selection.Height >= 3;
     private bool ToolbarsVisible => HasSelection && _drag is DragMode.None or DragMode.Drawing;
     private float TextPixelSize => S(14) + _penWidth * 2;
+    private string HintText => _recordMode ? Strings.RecordHint : Strings.Hint;
 
     private Font UiFont => _uiFont ??= new Font("Segoe UI", S(12), FontStyle.Regular, GraphicsUnit.Pixel);
     private Font IconFont => _iconFont ??= new Font("Segoe MDL2 Assets", S(16), FontStyle.Regular, GraphicsUnit.Pixel);
     private Font IconTextFont => _iconTextFont ??= new Font("Segoe UI", S(17), FontStyle.Bold, GraphicsUnit.Pixel);
+    private Font AspectFont => _aspectFont ??= new Font("Segoe UI", S(10), FontStyle.Bold, GraphicsUnit.Pixel);
 
     private int S(int value) => (int)Math.Round(value * DeviceDpi / 96.0);
 
@@ -138,7 +162,7 @@ internal sealed class CaptureForm : Form
     {
         base.OnShown(e);
         Activate();
-        _lastVisual = HintBounds();
+        _lastVisual = VisualBounds();
         Invalidate();
     }
 
@@ -177,6 +201,7 @@ internal sealed class CaptureForm : Form
             _uiFont?.Dispose();
             _iconFont?.Dispose();
             _iconTextFont?.Dispose();
+            _aspectFont?.Dispose();
             foreach (var annotation in _annotations.OfType<IDisposable>())
                 annotation.Dispose();
         }
@@ -199,7 +224,11 @@ internal sealed class CaptureForm : Form
         if (!HasSelection)
         {
             if (_drag != DragMode.Creating)
+            {
                 DrawHint(g);
+                if (_recordMode)
+                    DrawWholeMonitorButtons(g);
+            }
             return;
         }
 
@@ -225,8 +254,25 @@ internal sealed class CaptureForm : Form
         using (var path = Shapes.RoundedRect(bounds, S(6)))
         using (var background = new SolidBrush(Color.FromArgb(200, 20, 20, 20)))
             g.FillPath(background, path);
-        TextRenderer.DrawText(g, Strings.Hint, UiFont, bounds, Color.White,
+        TextRenderer.DrawText(g, HintText, UiFont, bounds, Color.White,
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+    }
+
+    private void DrawWholeMonitorButtons(Graphics g)
+    {
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        int dot = S(12);
+        using var background = new SolidBrush(Color.FromArgb(230, 20, 20, 20));
+        using var red = new SolidBrush(Color.FromArgb(229, 57, 53));
+        foreach (var bounds in WholeMonitorButtons().Select(b => b.Button))
+        {
+            using (var path = Shapes.RoundedRect(bounds, S(6)))
+                g.FillPath(background, path);
+            g.FillEllipse(red, bounds.Left + S(14), bounds.Top + (bounds.Height - dot) / 2, dot, dot);
+            var text = Rectangle.FromLTRB(bounds.Left + S(34), bounds.Top, bounds.Right, bounds.Bottom);
+            TextRenderer.DrawText(g, Strings.RecordWholeMonitor, UiFont, text, Color.White,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+        }
     }
 
     private void DrawSelectionFrame(Graphics g)
@@ -262,7 +308,8 @@ internal sealed class CaptureForm : Form
 
     private void DrawToolbars(Graphics g)
     {
-        DrawBar(g, _verticalBar);
+        if (!_verticalBar.IsEmpty)
+            DrawBar(g, _verticalBar);
         DrawBar(g, _horizontalBar);
         foreach (var button in _buttons)
             DrawButton(g, button);
@@ -282,7 +329,7 @@ internal sealed class CaptureForm : Form
     private void DrawButton(Graphics g, ToolbarButton button)
     {
         var bounds = button.Bounds;
-        bool active = ToolFor(button.Action) is { } tool && tool == _tool;
+        bool active = button.Action == ToolbarAction.Aspect ? _aspect != null : ToolFor(button.Action) is { } tool && tool == _tool;
         if (active || button == _hover)
         {
             using var path = Shapes.RoundedRect(Rectangle.Inflate(bounds, -S(2), -S(2)), S(4));
@@ -312,17 +359,25 @@ internal sealed class CaptureForm : Form
                 break;
             case ToolbarAction.Redact:
                 DrawRedactGlyph(g, _redactStyle, new Rectangle(inner.Left, inner.Top + S(3), inner.Width, inner.Height - S(6)), foreground);
-                // Small corner triangle: press and hold opens the style menu.
-                using (var corner = new SolidBrush(Color.FromArgb(120, foreground)))
+                DrawHoldCorner(g, bounds, foreground);
+                break;
+            case ToolbarAction.Aspect:
+                if (_aspect is { } aspect)
                 {
-                    int c = S(5);
-                    g.FillPolygon(corner, new Point[]
-                    {
-                        new(bounds.Right - S(3), bounds.Bottom - S(3) - c),
-                        new(bounds.Right - S(3), bounds.Bottom - S(3)),
-                        new(bounds.Right - S(3) - c, bounds.Bottom - S(3)),
-                    });
+                    TextRenderer.DrawText(g, aspect.ToString(), AspectFont, bounds, foreground,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
                 }
+                else
+                {
+                    using var frame = new Pen(foreground, Math.Max(1f, S(1))) { DashStyle = DashStyle.Dash };
+                    g.DrawRectangle(frame, inner.Left, inner.Top + S(2), inner.Width, inner.Height - S(4));
+                }
+                DrawHoldCorner(g, bounds, foreground);
+                break;
+            case ToolbarAction.Record:
+                using (var dot = new SolidBrush(_annotations.Count > 0 ? Color.Silver : Color.FromArgb(229, 57, 53)))
+                    g.FillEllipse(dot, Rectangle.Inflate(bounds, -S(10), -S(10)));
+                DrawHoldCorner(g, bounds, foreground);
                 break;
             case ToolbarAction.Marker:
                 DrawMarkerGlyph(g, Rectangle.Inflate(bounds, -S(6), -S(6)), foreground, 1.6f * DeviceDpi / 96f);
@@ -344,6 +399,19 @@ internal sealed class CaptureForm : Form
             case ToolbarAction.Save: Glyph(g, "", bounds, foreground); break;
             case ToolbarAction.Close: Glyph(g, "", bounds, foreground); break;
         }
+    }
+
+    /// <summary>Small corner triangle: press and hold opens a menu.</summary>
+    private void DrawHoldCorner(Graphics g, Rectangle bounds, Color foreground)
+    {
+        using var corner = new SolidBrush(Color.FromArgb(120, foreground));
+        int c = S(5);
+        g.FillPolygon(corner, new Point[]
+        {
+            new(bounds.Right - S(3), bounds.Bottom - S(3) - c),
+            new(bounds.Right - S(3), bounds.Bottom - S(3)),
+            new(bounds.Right - S(3) - c, bounds.Bottom - S(3)),
+        });
     }
 
     /// <summary>Outline highlighter tilted 35°, its chisel tip resting on a baseline.</summary>
@@ -434,7 +502,7 @@ internal sealed class CaptureForm : Form
             return cached;
 
         var monitor = RectangleToClient(Screen.FromPoint(MousePosition).Bounds);
-        var text = TextRenderer.MeasureText(Strings.Hint, UiFont);
+        var text = TextRenderer.MeasureText(HintText, UiFont);
         var size = new Size(text.Width + S(32), text.Height + S(18));
         var bounds = new Rectangle(monitor.Left + (monitor.Width - size.Width) / 2,
                                    monitor.Top + (monitor.Height - size.Height) / 2, size.Width, size.Height);
@@ -442,10 +510,28 @@ internal sealed class CaptureForm : Form
         return bounds;
     }
 
-    private string SizeLabelText() =>
-        _tool == Tool.None
-            ? $"{_selection.Width} × {_selection.Height}"
-            : $"{_selection.Width} × {_selection.Height}   ·   {_penWidth:0} px";
+    /// <summary>One button per monitor, below the middle where the hint sits, so any of them can be picked directly.</summary>
+    private List<(Rectangle Monitor, Rectangle Button)> WholeMonitorButtons()
+    {
+        var text = TextRenderer.MeasureText(Strings.RecordWholeMonitor, UiFont);
+        var size = new Size(text.Width + S(48), text.Height + S(18));
+        var buttons = new List<(Rectangle, Rectangle)>();
+        foreach (var screen in Screen.AllScreens)
+        {
+            var monitor = Rectangle.Intersect(RectangleToClient(screen.Bounds), ClientRectangle);
+            var location = new Point(monitor.Left + (monitor.Width - size.Width) / 2, monitor.Top + monitor.Height / 2 + S(36));
+            buttons.Add((monitor, new Rectangle(location, size)));
+        }
+        return buttons;
+    }
+
+    private string SizeLabelText()
+    {
+        var text = $"{_selection.Width} × {_selection.Height}";
+        if (_aspect is { } aspect)
+            text += $"   ·   {aspect}";
+        return _tool == Tool.None ? text : $"{text}   ·   {_penWidth:0} px";
+    }
 
     private Rectangle SizeLabelBounds()
     {
@@ -492,12 +578,15 @@ internal sealed class CaptureForm : Form
         var vertical = _buttons.Where(b => b.Vertical).ToList();
         var horizontal = _buttons.Where(b => !b.Vertical).ToList();
 
-        int vw = button + 2 * pad, vh = vertical.Count * button + 2 * pad;
-        int vx = _selection.Right + gap;
-        if (vx + vw > area.Right) vx = _selection.Left - gap - vw;
-        if (vx < area.Left) vx = _selection.Right - gap - vw;
-        int vy = Math.Clamp(_selection.Bottom - vh, area.Top, Math.Max(area.Top, area.Bottom - vh));
-        _verticalBar = new Rectangle(vx, vy, vw, vh);
+        if (vertical.Count > 0)
+        {
+            int vw = button + 2 * pad, vh = vertical.Count * button + 2 * pad;
+            int vx = _selection.Right + gap;
+            if (vx + vw > area.Right) vx = _selection.Left - gap - vw;
+            if (vx < area.Left) vx = _selection.Right - gap - vw;
+            int vy = Math.Clamp(_selection.Bottom - vh, area.Top, Math.Max(area.Top, area.Bottom - vh));
+            _verticalBar = new Rectangle(vx, vy, vw, vh);
+        }
 
         int hw = horizontal.Count * button + 2 * pad, hh = button + 2 * pad;
         int hy = _selection.Bottom + gap;
@@ -505,7 +594,7 @@ internal sealed class CaptureForm : Form
         if (hy < area.Top) hy = _selection.Bottom - gap - hh;
         int hx = Math.Clamp(_selection.Right - hw, area.Left, Math.Max(area.Left, area.Right - hw));
         _horizontalBar = new Rectangle(hx, hy, hw, hh);
-        if (_horizontalBar.IntersectsWith(_verticalBar))
+        if (!_verticalBar.IsEmpty && _horizontalBar.IntersectsWith(_verticalBar))
             _horizontalBar.X = Math.Max(area.Left, _verticalBar.Left - gap - hw);
 
         for (int i = 0; i < vertical.Count; i++)
@@ -517,13 +606,19 @@ internal sealed class CaptureForm : Form
     private Rectangle VisualBounds()
     {
         if (!HasSelection)
-            return _drag == DragMode.Creating ? Rectangle.Empty : HintBounds();
+        {
+            if (_drag == DragMode.Creating)
+                return Rectangle.Empty;
+            var hint = HintBounds();
+            return _recordMode ? WholeMonitorButtons().Aggregate(hint, (all, b) => Shapes.Union(all, b.Button)) : hint;
+        }
 
         var visual = Rectangle.Inflate(_selection, S(8), S(8));
         visual = Shapes.Union(visual, SizeLabelBounds());
         if (ToolbarsVisible)
         {
-            visual = Shapes.Union(visual, Rectangle.Inflate(_verticalBar, 1, 1));
+            if (!_verticalBar.IsEmpty)
+                visual = Shapes.Union(visual, Rectangle.Inflate(_verticalBar, 1, 1));
             visual = Shapes.Union(visual, Rectangle.Inflate(_horizontalBar, 1, 1));
             if (_hover != null)
                 visual = Shapes.Union(visual, TooltipBounds(_hover));
@@ -574,9 +669,9 @@ internal sealed class CaptureForm : Form
     {
         base.OnMouseDown(e);
 
-        if (e.Button == MouseButtons.Right && HitButton(e.Location) is { Action: ToolbarAction.Redact } redactButton)
+        if (e.Button == MouseButtons.Right && HitButton(e.Location) is { Action: ToolbarAction.Redact or ToolbarAction.Aspect or ToolbarAction.Record } menuButton)
         {
-            ShowRedactMenu(redactButton);
+            ShowButtonMenu(menuButton);
             return;
         }
         if (e.Button == MouseButtons.Right)
@@ -596,12 +691,26 @@ internal sealed class CaptureForm : Form
         CommitText();
         var p = e.Location;
 
+        if (_recordMode && !HasSelection)
+        {
+            foreach (var (monitor, wholeMonitor) in WholeMonitorButtons())
+            {
+                if (wholeMonitor.Contains(p))
+                {
+                    SetAspect(null);
+                    _selection = monitor;
+                    RecordSelection();
+                    return;
+                }
+            }
+        }
+
         if (HitButton(p) is { } button)
         {
-            if (button.Action == ToolbarAction.Redact)
+            if (button.Action is ToolbarAction.Redact or ToolbarAction.Aspect or ToolbarAction.Record)
             {
-                // Click selects the tool on release; holding opens the style menu instead.
-                _redactPressed = true;
+                // Click acts on release; holding opens the button's menu instead.
+                _pressed = button.Action;
                 _holdTimer.Start();
                 return;
             }
@@ -661,19 +770,21 @@ internal sealed class CaptureForm : Form
                 if (_annotations.Count == 0 && IsDrag(p))
                 {
                     _drag = DragMode.Creating;
-                    _selection = Rectangle.Intersect(Shapes.Normalize(_dragStart, p), ClientRectangle);
+                    _selection = DraggedSelection(_dragStart, p);
                     RefreshVisual();
                 }
                 break;
             case DragMode.Creating:
-                _selection = Rectangle.Intersect(Shapes.Normalize(_dragStart, p), ClientRectangle);
+                _selection = DraggedSelection(_dragStart, p);
                 RefreshVisual();
                 break;
             case DragMode.Moving:
                 var moved = _selectionAtDragStart;
                 moved.Offset(p.X - _dragStart.X, p.Y - _dragStart.Y);
-                moved.X = Math.Clamp(moved.X, 0, ClientSize.Width - moved.Width);
-                moved.Y = Math.Clamp(moved.Y, 0, ClientSize.Height - moved.Height);
+                // Locked, stay on one monitor: cutting the selection at its edge would break the ratio.
+                var limit = _aspect != null ? MonitorAt(_dragStart) : ClientRectangle;
+                moved.X = Math.Clamp(moved.X, limit.Left, Math.Max(limit.Left, limit.Right - moved.Width));
+                moved.Y = Math.Clamp(moved.Y, limit.Top, Math.Max(limit.Top, limit.Bottom - moved.Height));
                 _selection = moved;
                 RefreshVisual();
                 break;
@@ -694,11 +805,16 @@ internal sealed class CaptureForm : Form
     protected override void OnMouseUp(MouseEventArgs e)
     {
         base.OnMouseUp(e);
-        if (e.Button == MouseButtons.Left && _redactPressed)
+        if (e.Button == MouseButtons.Left && _pressed is { } pressed)
         {
-            _redactPressed = false;
+            _pressed = null;
             _holdTimer.Stop();
-            SelectTool(Tool.Redact);
+            switch (pressed)
+            {
+                case ToolbarAction.Record: RecordSelection(); break;
+                case ToolbarAction.Aspect: ToggleAspect(); break;
+                default: SelectTool(Tool.Redact); break;
+            }
             return;
         }
         if (e.Button != MouseButtons.Left || _drag == DragMode.None)
@@ -708,7 +824,7 @@ internal sealed class CaptureForm : Form
         if (_drag == DragMode.Outside)
         {
             _drag = DragMode.None;
-            if (!IsDrag(e.Location))
+            if (!IsDrag(e.Location) && !_recordMode)
                 CopyAndClose();
             return;
         }
@@ -721,7 +837,14 @@ internal sealed class CaptureForm : Form
             _current = null;
         }
         if (_drag == DragMode.Creating && !HasSelection)
+        {
             _selection = Rectangle.Empty;
+            if (_recordMode)
+            {
+                _drag = DragMode.None;
+                SelectMonitorUnderCursor();
+            }
+        }
 
         _drag = DragMode.None;
         _activeHandle = NoHandle;
@@ -757,6 +880,28 @@ internal sealed class CaptureForm : Form
     private void ResizeSelection(Point p)
     {
         var r = _selectionAtDragStart;
+        if (_aspect is { } aspect)
+        {
+            // The handle's opposite corner stays put; a side handle counts as the corner next to it.
+            var (anchor, target) = _activeHandle switch
+            {
+                0 => (new Point(r.Right, r.Bottom), p),
+                1 => (new Point(r.Left, r.Bottom), new Point(r.Left, p.Y)),
+                2 => (new Point(r.Left, r.Bottom), p),
+                3 => (new Point(r.Left, r.Top), new Point(p.X, r.Top)),
+                4 => (new Point(r.Left, r.Top), p),
+                5 => (new Point(r.Left, r.Top), new Point(r.Left, p.Y)),
+                6 => (new Point(r.Right, r.Top), p),
+                _ => (new Point(r.Right, r.Top), new Point(p.X, r.Top)),
+            };
+            // The monitor comes from the selection's middle: Right and Bottom lie just outside it, maybe on the next one.
+            var middle = new Point(r.Left + r.Width / 2, r.Top + r.Height / 2);
+            var resized = LockedRectangle(aspect, anchor, target, MonitorAt(middle));
+            if (resized.Width > 0)
+                _selection = resized;
+            return;
+        }
+
         int dx = p.X - _dragStart.X, dy = p.Y - _dragStart.Y;
         int left = r.Left, top = r.Top, right = r.Right, bottom = r.Bottom;
         switch (_activeHandle)
@@ -773,6 +918,53 @@ internal sealed class CaptureForm : Form
         _selection = Rectangle.Intersect(
             Rectangle.FromLTRB(Math.Min(left, right), Math.Min(top, bottom), Math.Max(left, right), Math.Max(top, bottom)),
             ClientRectangle);
+    }
+
+    private Rectangle MonitorAt(Point client) =>
+        Rectangle.Intersect(RectangleToClient(Screen.FromPoint(PointToScreen(client)).Bounds), ClientRectangle);
+
+    private Rectangle DraggedSelection(Point start, Point p) =>
+        _aspect is { } aspect ? LockedRectangle(aspect, start, p, MonitorAt(start)) : Rectangle.Intersect(Shapes.Normalize(start, p), ClientRectangle);
+
+    /// <summary>The largest rectangle of the ratio from the anchor towards the point that still fits inside the limit.</summary>
+    private static Rectangle LockedRectangle(AspectRatio aspect, Point anchor, Point p, Rectangle limit)
+    {
+        bool right = p.X >= anchor.X, down = p.Y >= anchor.Y;
+        int stepWidth = aspect.StepWidth, stepHeight = aspect.StepHeight;
+        int steps = Math.Max(Math.Abs(p.X - anchor.X) / stepWidth, Math.Abs(p.Y - anchor.Y) / stepHeight);
+        int maxWidth = right ? limit.Right - anchor.X : anchor.X - limit.Left;
+        int maxHeight = down ? limit.Bottom - anchor.Y : anchor.Y - limit.Top;
+        steps = Math.Min(steps, Math.Min(maxWidth / stepWidth, maxHeight / stepHeight));
+
+        int width = steps * stepWidth, height = steps * stepHeight;
+        return new Rectangle(right ? anchor.X : anchor.X - width, down ? anchor.Y : anchor.Y - height, width, height);
+    }
+
+    private void ToggleAspect() => SetAspect(_aspect == null ? _lastAspect : null);
+
+    private void SetAspect(AspectRatio? aspect)
+    {
+        _aspect = aspect;
+        if (aspect is { } chosen)
+            _lastAspect = chosen;
+        if (_buttons.FirstOrDefault(b => b.Action == ToolbarAction.Aspect) is { } button)
+            button.Tooltip = AspectTooltip();
+
+        if (aspect is { } ratio && HasSelection)
+        {
+            // Keep the height and the center; a selection crossing monitors falls back to the monitor under its center.
+            int stepWidth = ratio.StepWidth, stepHeight = ratio.StepHeight;
+            var center = new Point(_selection.Left + _selection.Width / 2, _selection.Top + _selection.Height / 2);
+            var limit = MonitorAt(center);
+            int steps = Math.Min(Math.Min(_selection.Height, limit.Height) / stepHeight, limit.Width / stepWidth);
+            steps = Math.Max(steps, 1);
+            int width = steps * stepWidth, height = steps * stepHeight;
+            _selection = new Rectangle(
+                Math.Clamp(center.X - width / 2, limit.Left, limit.Right - width),
+                Math.Clamp(center.Y - height / 2, limit.Top, limit.Bottom - height),
+                width, height);
+        }
+        RefreshVisual();
     }
 
     private void UpdateHover(Point p)
@@ -794,7 +986,7 @@ internal sealed class CaptureForm : Form
         if (button != null)
             return Cursors.Hand;
         if (!HasSelection)
-            return Cursors.Cross;
+            return _recordMode && WholeMonitorButtons().Any(b => b.Button.Contains(p)) ? Cursors.Hand : Cursors.Cross;
 
         switch (HitHandle(p))
         {
@@ -957,6 +1149,7 @@ internal sealed class CaptureForm : Form
 
         switch (action)
         {
+            case ToolbarAction.Record: RecordSelection(); break;
             case ToolbarAction.Color: PickColor(); break;
             case ToolbarAction.Undo: Undo(); break;
             case ToolbarAction.Upload: UploadAndClose(); break;
@@ -995,14 +1188,24 @@ internal sealed class CaptureForm : Form
 
     private string RedactTooltip() => string.Format(Strings.ToolRedact, RedactStyleName(_redactStyle));
 
-    private void OnRedactHold()
+    private void OnButtonHold()
     {
         _holdTimer.Stop();
-        if (!_redactPressed)
+        if (_pressed is not { } pressed)
             return;
-        _redactPressed = false;
-        if (_buttons.FirstOrDefault(b => b.Action == ToolbarAction.Redact) is { } button)
-            ShowRedactMenu(button);
+        _pressed = null;
+        if (_buttons.FirstOrDefault(b => b.Action == pressed) is { } button)
+            ShowButtonMenu(button);
+    }
+
+    private void ShowButtonMenu(ToolbarButton button)
+    {
+        switch (button.Action)
+        {
+            case ToolbarAction.Record: ShowRecordMenu(button); break;
+            case ToolbarAction.Aspect: ShowAspectMenu(button); break;
+            default: ShowRedactMenu(button); break;
+        }
     }
 
     private void ShowRedactMenu(ToolbarButton button)
@@ -1062,6 +1265,80 @@ internal sealed class CaptureForm : Form
             RefreshVisual();
     }
 
+    private static string RecordFormatName(RecordFormat format) => format == RecordFormat.Gif ? "GIF" : "MP4";
+
+    private string RecordTooltip() => string.Format(Strings.ActionRecord, RecordFormatName(_settings.RecordFormat));
+
+    private string AspectTooltip() => string.Format(Strings.ActionAspect, _aspect?.ToString() ?? Strings.AspectFree);
+
+    private void ShowAspectMenu(ToolbarButton button)
+    {
+        Capture = false;
+        var menu = new ContextMenuStrip { ShowImageMargin = false, ShowCheckMargin = true };
+        var free = new ToolStripMenuItem(Strings.AspectFree) { Checked = _aspect == null };
+        free.Click += (_, _) => SetAspect(null);
+        menu.Items.Add(free);
+        foreach (var aspect in _aspectChoices)
+        {
+            var item = new ToolStripMenuItem(aspect.ToString()) { Checked = aspect == _aspect };
+            item.Click += (_, _) => SetAspect(aspect);
+            menu.Items.Add(item);
+        }
+        ShowBarMenu(menu, button);
+    }
+
+    /// <summary>Opens a menu under the button of the action bar, or above it where there's no room.</summary>
+    private void ShowBarMenu(ContextMenuStrip menu, ToolbarButton button)
+    {
+        menu.Closed += (_, _) => BeginInvoke(new Action(menu.Dispose));
+        var b = button.Bounds;
+        bool roomBelow = _horizontalBar.Bottom + menu.GetPreferredSize(Size.Empty).Height < ClientSize.Height;
+        menu.Show(this, roomBelow ? new Point(b.Left, _horizontalBar.Bottom) : new Point(b.Left, _horizontalBar.Top),
+            roomBelow ? ToolStripDropDownDirection.BelowRight : ToolStripDropDownDirection.AboveRight);
+    }
+
+    private void ShowRecordMenu(ToolbarButton button)
+    {
+        Capture = false;
+        var menu = new ContextMenuStrip { ShowImageMargin = false, ShowCheckMargin = true };
+        foreach (var format in Enum.GetValues<RecordFormat>())
+        {
+            var item = new ToolStripMenuItem(RecordFormatName(format)) { Checked = format == _settings.RecordFormat };
+            item.Click += (_, _) =>
+            {
+                _settings.RecordFormat = format;
+                button.Tooltip = RecordTooltip();
+                RefreshVisual();
+            };
+            menu.Items.Add(item);
+        }
+        menu.Items.Add(new ToolStripSeparator());
+
+        var wholeMonitor = new ToolStripMenuItem(Strings.RecordWholeMonitor) { Enabled = _annotations.Count == 0 };
+        wholeMonitor.Click += (_, _) =>
+        {
+            SelectMonitorUnderCursor();
+            RecordSelection();
+        };
+        menu.Items.Add(wholeMonitor);
+
+        var cursor = new ToolStripMenuItem(Strings.RecordCursor) { Checked = _settings.RecordCursor };
+        cursor.Click += (_, _) => _settings.RecordCursor = !_settings.RecordCursor;
+        menu.Items.Add(cursor);
+
+        ShowBarMenu(menu, button);
+    }
+
+    /// <summary>Annotations belong to a screenshot and can't be recorded, so the button waits until they're gone.</summary>
+    private void RecordSelection()
+    {
+        if (_onRecord == null || !HasSelection || _annotations.Count > 0 || _textBox != null)
+            return;
+        var area = RectangleToScreen(_selection);
+        Close();
+        _onRecord(area);
+    }
+
     private void ResetSelection()
     {
         _selection = Rectangle.Empty;
@@ -1074,6 +1351,8 @@ internal sealed class CaptureForm : Form
     {
         if (_annotations.Count > 0)
             return;
+        // A whole monitor is its own shape, so handles dragged afterwards shouldn't snap to the old ratio.
+        SetAspect(null);
         _selection = Rectangle.Intersect(RectangleToClient(Screen.FromPoint(MousePosition).Bounds), ClientRectangle);
         RefreshVisual();
     }
@@ -1147,9 +1426,28 @@ internal sealed class CaptureForm : Form
         }
 
         e.Handled = true;
+        if (_recordMode)
+        {
+            switch (e.KeyData)
+            {
+                case Keys.Escape: Close(); break;
+                case Keys.Enter:
+                case Keys.Control | Keys.R: RecordSelection(); break;
+                case Keys.Control | Keys.A: SelectMonitorUnderCursor(); break;
+                case Keys.V: ToggleAspect(); break;
+                default: e.Handled = false; break;
+            }
+            if (e.Handled)
+                e.SuppressKeyPress = true;
+            base.OnKeyDown(e);
+            return;
+        }
+
         switch (e.KeyData)
         {
             case Keys.Escape: Close(); break;
+            case Keys.Control | Keys.R: RecordSelection(); break;
+            case Keys.V: ToggleAspect(); break;
             case Keys.Enter:
             case Keys.Control | Keys.C: CopyAndClose(); break;
             case Keys.Control | Keys.S: SaveAndClose(); break;

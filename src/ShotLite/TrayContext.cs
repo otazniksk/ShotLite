@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Security.Cryptography;
 
 namespace ShotLite;
 
@@ -8,6 +10,7 @@ internal sealed class TrayContext : ApplicationContext
     private const int CaptureHotkeyId = 1;
     private const int SaveFullHotkeyId = 2;
     private const int CopyFullHotkeyId = 3;
+    private const int RecordHotkeyId = 4;
 
     private readonly AppSettings _settings;
     private readonly Icon _icon;
@@ -16,6 +19,7 @@ internal sealed class TrayContext : ApplicationContext
     private readonly ImageActions _actions;
     private readonly HotkeyManager _hotkeys = new();
     private readonly ToolStripMenuItem _captureItem;
+    private readonly ToolStripMenuItem _recordItem;
     private readonly ToolStripMenuItem _saveFullItem;
     private readonly ToolStripMenuItem _copyFullItem;
     private readonly ToolStripMenuItem _openFolderItem;
@@ -26,9 +30,12 @@ internal sealed class TrayContext : ApplicationContext
     private readonly ToolStripSeparator _updateSeparator = new() { Visible = false };
     private readonly System.Windows.Forms.Timer _updateTimer = new();
     private UpdateInfo? _update;
+    private bool _updateDownloading;
+    private string? _updateInstaller;
     private CaptureForm? _overlay;
     private bool _settingsOpen;
     private AboutForm? _about;
+    private RecordingSession? _recording;
 
     public TrayContext()
     {
@@ -38,13 +45,14 @@ internal sealed class TrayContext : ApplicationContext
 
         _captureItem = new ToolStripMenuItem(null, null, (_, _) => Deferred(StartCapture));
         _captureItem.Font = new Font(_captureItem.Font, FontStyle.Bold);
+        _recordItem = new ToolStripMenuItem(null, null, (_, _) => Deferred(ToggleRecording)) { Visible = ScreenRecorder.IsSupported };
         _saveFullItem = new ToolStripMenuItem(null, null, (_, _) => Deferred(SaveFullScreen));
         _copyFullItem = new ToolStripMenuItem(null, null, (_, _) => Deferred(CopyFullScreen));
         _openFolderItem = new ToolStripMenuItem(null, null, (_, _) => OpenSaveFolder());
         _settingsItem = new ToolStripMenuItem(null, null, (_, _) => ShowSettings());
         _aboutItem = new ToolStripMenuItem(null, null, (_, _) => ShowAbout());
         _exitItem = new ToolStripMenuItem(null, null, (_, _) => ExitThread());
-        _updateItem = new ToolStripMenuItem(null, null, (_, _) => OpenUpdatePage())
+        _updateItem = new ToolStripMenuItem(null, null, (_, _) => OnUpdateClicked())
         {
             Visible = false,
             ForeColor = Color.FromArgb(220, 38, 38),
@@ -58,8 +66,11 @@ internal sealed class TrayContext : ApplicationContext
             _updateItem,
             _updateSeparator,
             _captureItem,
+            new ToolStripSeparator(),
+            _recordItem,
             _saveFullItem,
             _copyFullItem,
+            new ToolStripSeparator(),
             _openFolderItem,
             new ToolStripSeparator(),
             _settingsItem,
@@ -71,12 +82,17 @@ internal sealed class TrayContext : ApplicationContext
         _tray = new NotifyIcon { Icon = _icon, Text = Strings.AppName, ContextMenuStrip = menu, Visible = true };
         _tray.MouseClick += (_, e) =>
         {
-            if (e.Button == MouseButtons.Left)
+            if (e.Button != MouseButtons.Left)
+                return;
+            if (_recording != null)
+                _recording.Stop();
+            else
                 Deferred(StartCapture);
         };
 
         _notifier = new Notifier(_tray, () => _settings.ShowNotifications);
         _actions = new ImageActions(_settings, _notifier);
+        _actions.UploadFinished += LaunchUpdateWhenIdle;
         _hotkeys.Pressed += OnHotkey;
 
         // Follow the registry (the installer may have enabled autostart) and refresh the path in case the exe moved.
@@ -85,6 +101,7 @@ internal sealed class TrayContext : ApplicationContext
             Autostart.Set(true);
 
         // First check shortly after start (not to slow down login), then once a day.
+        UpdateInstaller.DeleteDownloads();
         _updateTimer.Interval = 10_000;
         _updateTimer.Tick += (_, _) =>
         {
@@ -114,12 +131,85 @@ internal sealed class TrayContext : ApplicationContext
         _updateItem.Visible = _updateSeparator.Visible = true;
         ApplyTexts();
 
+        bool installable = UpdateInstaller.CanInstall;
+        if (installable && _settings.AutoInstallUpdates && await InstallUpdate(quiet: true))
+            return;
+
         var version = update.Version.ToString(3);
         if (_settings.LastNotifiedUpdate != version)
         {
             _settings.LastNotifiedUpdate = version;
             _settings.Save();
-            _notifier.Show(string.Format(Strings.UpdateNotification, version), OpenUpdatePage);
+            _notifier.Show(string.Format(installable ? Strings.UpdateNotificationInstall : Strings.UpdateNotification, version), OnUpdateClicked);
+        }
+    }
+
+    private async void OnUpdateClicked()
+    {
+        if (UpdateInstaller.CanInstall)
+            await InstallUpdate(quiet: false);
+        else
+            OpenUpdatePage();
+    }
+
+    /// <param name="quiet">Automatic update: a failure stays silent and falls back to the normal notification.</param>
+    /// <returns>True when the verified installer is ready.</returns>
+    private async Task<bool> InstallUpdate(bool quiet)
+    {
+        if (_update == null || _updateDownloading || _updateInstaller != null)
+            return true;
+
+        _updateDownloading = true;
+        ApplyTexts();
+        if (!quiet)
+            _notifier.Show(Strings.UpdateDownloading, force: true);
+
+        string? failure = null;
+        try
+        {
+            _updateInstaller = await UpdateInstaller.DownloadAsync(_update.Version); // continues on the UI thread
+        }
+        catch (Exception ex) when (ex is InvalidDataException or CryptographicException)
+        {
+            failure = Strings.UpdateBadSignature;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or IOException or UnauthorizedAccessException)
+        {
+            failure = ex.Message;
+        }
+        _updateDownloading = false;
+        ApplyTexts();
+
+        if (failure != null)
+        {
+            if (!quiet)
+                _notifier.Error(string.Format(Strings.UpdateFailed, failure));
+            return false;
+        }
+        LaunchUpdateWhenIdle();
+        return true;
+    }
+
+    /// <summary>Never interrupts work: with a recording, the overlay or settings open it waits until they're closed.</summary>
+    private void LaunchUpdateWhenIdle()
+    {
+        if (_updateInstaller is not { } installer || _update == null
+            || _recording != null || _overlay != null || _settingsOpen || _actions.IsUploading)
+            return;
+
+        _updateInstaller = null;
+        try
+        {
+            UpdateInstaller.Launch(installer, _update.Version);
+            ExitThread();
+        }
+        catch (InvalidDataException)
+        {
+            _notifier.Error(string.Format(Strings.UpdateFailed, Strings.UpdateBadSignature));
+        }
+        catch (Exception ex) when (ex is Win32Exception or IOException or UnauthorizedAccessException)
+        {
+            _notifier.Error(string.Format(Strings.UpdateFailed, ex.Message));
         }
     }
 
@@ -130,6 +220,7 @@ internal sealed class TrayContext : ApplicationContext
     private void ApplyTexts()
     {
         _captureItem.Text = Strings.MenuCapture;
+        _recordItem.Text = _recording != null ? Strings.MenuStopRecording : Strings.MenuRecord;
         _saveFullItem.Text = Strings.MenuSaveFull;
         _copyFullItem.Text = Strings.MenuCopyFull;
         _openFolderItem.Text = Strings.MenuOpenFolder;
@@ -137,12 +228,23 @@ internal sealed class TrayContext : ApplicationContext
         _aboutItem.Text = Strings.MenuAbout;
         _exitItem.Text = Strings.MenuExit;
         if (_update != null)
-            _updateItem.Text = string.Format(Strings.MenuUpdateAvailable, _update.Version.ToString(3));
+        {
+            var label = UpdateInstaller.CanInstall ? Strings.MenuInstallUpdate : Strings.MenuUpdateAvailable;
+            _updateItem.Text = _updateDownloading ? Strings.UpdateDownloading : string.Format(label, _update.Version.ToString(3));
+            _updateItem.Enabled = !_updateDownloading;
+        }
     }
 
     private void OnHotkey(int id)
     {
         if (_settingsOpen)
+            return;
+        if (id == RecordHotkeyId)
+        {
+            ToggleRecording();
+            return;
+        }
+        if (_recording != null)
             return;
         switch (id)
         {
@@ -152,8 +254,20 @@ internal sealed class TrayContext : ApplicationContext
         }
     }
 
-    private void StartCapture()
+    private void StartCapture() => OpenOverlay(recordMode: false);
+
+    private void ToggleRecording()
     {
+        if (_recording != null)
+            _recording.Stop();
+        else if (ScreenRecorder.IsSupported)
+            OpenOverlay(recordMode: true);
+    }
+
+    private void OpenOverlay(bool recordMode)
+    {
+        if (_recording != null)
+            return;
         if (_overlay is { IsDisposed: false })
         {
             _overlay.Activate();
@@ -161,13 +275,37 @@ internal sealed class TrayContext : ApplicationContext
         }
 
         using var capture = ScreenCapture.CaptureVirtualScreen(out var bounds);
-        _overlay = new CaptureForm(capture, bounds, _settings, _actions);
+        _overlay = new CaptureForm(capture, bounds, _settings, _actions, ScreenRecorder.IsSupported ? StartRecording : null, recordMode);
         _overlay.FormClosed += (_, _) =>
         {
             _overlay = null;
             _settings.Save();
+            // Later: the overlay starts its recording or upload only after it has closed.
+            Deferred(LaunchUpdateWhenIdle);
         };
         _overlay.Show();
+    }
+
+    private void StartRecording(Rectangle area)
+    {
+        var session = new RecordingSession(area, _settings, _actions);
+        session.Finished += () =>
+        {
+            _recording = null;
+            SetRecordingMenu();
+            LaunchUpdateWhenIdle();
+        };
+        _recording = session;
+        SetRecordingMenu();
+        session.Start();
+    }
+
+    /// <summary>While recording, the menu offers only stopping: a screenshot would freeze the screen under the clip.</summary>
+    private void SetRecordingMenu()
+    {
+        bool idle = _recording == null;
+        _captureItem.Enabled = _saveFullItem.Enabled = _copyFullItem.Enabled = idle;
+        ApplyTexts();
     }
 
     private void SaveFullScreen()
@@ -218,6 +356,7 @@ internal sealed class TrayContext : ApplicationContext
         {
             _settingsOpen = false;
             RegisterHotkeys();
+            LaunchUpdateWhenIdle();
         }
     }
 
@@ -257,6 +396,8 @@ internal sealed class TrayContext : ApplicationContext
         Register(CaptureHotkeyId, _settings.HotkeyCapture, Strings.HotkeyCapture, _captureItem);
         Register(SaveFullHotkeyId, _settings.HotkeySaveFull, Strings.HotkeySaveFull, _saveFullItem);
         Register(CopyFullHotkeyId, _settings.HotkeyCopyFull, Strings.HotkeyCopyFull, _copyFullItem);
+        if (ScreenRecorder.IsSupported)
+            Register(RecordHotkeyId, _settings.HotkeyRecord, Strings.HotkeyRecord, _recordItem);
 
         if (failed.Count > 0)
         {
@@ -288,6 +429,7 @@ internal sealed class TrayContext : ApplicationContext
     protected override void ExitThreadCore()
     {
         _overlay?.Close();
+        _recording?.StopAndWait();
         _hotkeys.Dispose();
         _updateTimer.Dispose();
         _tray.Visible = false;

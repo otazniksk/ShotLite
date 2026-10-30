@@ -16,6 +16,8 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    # Only tags reach the signing key, and the environment makes each release wait for manual approval.
+    environment: ${{ github.ref_type == 'tag' && 'release' || '' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -45,6 +47,10 @@ jobs:
 
       # Self-contained: users need no .NET runtime. The languages folder stays next to the exe.
       - name: Publish
+        env:
+          # MSBuild properties, see ShotLite.csproj. An empty variable counts as unset.
+          UpdateRepository: ${{ github.repository }}
+          UpdatePublicKey: ${{ vars.UPDATE_PUBLIC_KEY }}
         run: >
           dotnet publish src/ShotLite/ShotLite.csproj -c Release -r win-x64
           --self-contained true
@@ -71,6 +77,13 @@ jobs:
           & $iscc /Qp "/DVersion=${{ steps.version.outputs.display }}" "/DNumericVersion=${{ steps.version.outputs.number }}" "/DSourceDir=..\out\app" installer\ShotLite.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed with $LASTEXITCODE" }
 
+      - name: Sign update
+        if: github.ref_type == 'tag' && (github.repository == 'otazniksk/ShotLite' || vars.UPDATE_PUBLIC_KEY != '')
+        shell: pwsh
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: installer/sign-update.ps1 out/ShotLite-install.exe ${{ steps.version.outputs.number }}
+
       - name: Portable zip
         shell: pwsh
         run: Compress-Archive -Path out/app/* -DestinationPath out/ShotLite-portable.zip
@@ -88,9 +101,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >
-          gh release create "$env:GITHUB_REF_NAME"
-          out/ShotLite-install.exe out/ShotLite-portable.zip
-          --title "ShotLite ${{ steps.version.outputs.number }}"
-          --generate-notes
-          --verify-tag
+        run: |
+          $files = @('out/ShotLite-install.exe', 'out/ShotLite-portable.zip')
+          if (Test-Path out/ShotLite-install.exe.sig) { $files += 'out/ShotLite-install.exe.sig' }
+          gh release create "$env:GITHUB_REF_NAME" @files --title "ShotLite ${{ steps.version.outputs.number }}" --generate-notes --verify-tag

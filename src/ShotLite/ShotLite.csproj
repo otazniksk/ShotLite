@@ -2,7 +2,9 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows10.0.22000.0</TargetFramework>
+    <!-- Recording needs Windows 10 2004 (and 11 for a borderless capture); older Windows 10 keeps the screenshot part. -->
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -10,16 +12,33 @@
     <RootNamespace>ShotLite</RootNamespace>
     <AssemblyName>ShotLite</AssemblyName>
     <!-- Base version for branch builds; a vX.Y.Z tag overrides it (see SetVersionFromGit). -->
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Product>ShotLite</Product>
     <Authors>Michal Škop</Authors>
     <Company>Michal Škop</Company>
     <Copyright>Copyright © 2026 Michal Škop · MIT License</Copyright>
     <Description>Lightweight screenshot tool inspired by Lightshot, without telemetry.</Description>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- The informational version is composed from git below; don't let the SDK append "+<sha>" itself. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
+
+  <!--
+    Where updates come from, compiled into the exe. MSBuild also reads these from environment variables:
+    build.yml passes the repository it runs in, and a fork adds the public half of its own key as the repository
+    variable UPDATE_PUBLIC_KEY (and the private half as the secret UPDATE_SIGNING_KEY of the "release" environment).
+    Only the official repository gets the official key: a fork without one offers updates as a download link.
+  -->
+  <PropertyGroup>
+    <UpdateRepository Condition="'$(UpdateRepository)' == ''">otazniksk/ShotLite</UpdateRepository>
+    <UpdatePublicKey Condition="'$(UpdatePublicKey)' == '' And '$(UpdateRepository)' == 'otazniksk/ShotLite'">MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELnycHE/sD0OiW6Qb8pFIrkEXYSb/n/bhSZBa3ph2PBGWvx7hyqdnnsx5KM3A2it6UWbO1wWb5NtZrwu96YL58Q==</UpdatePublicKey>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="UpdateRepository" Value="$(UpdateRepository)" />
+    <AssemblyMetadata Include="UpdatePublicKey" Value="$(UpdatePublicKey)" />
+  </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\app.ico" LogicalName="ShotLite.app.ico" />
