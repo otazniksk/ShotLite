@@ -10,6 +10,9 @@ internal static class BuildInfo
 
     public static string RepositoryUrl => $"https://github.com/{Repository}";
 
+    /// <summary>The project website, or empty when this build has none.</summary>
+    public static string WebsiteUrl => Metadata("Website");
+
     /// <summary>Verifies update signatures; empty when this build has no signing key, which turns installing updates off.</summary>
     public static string UpdatePublicKey => Metadata("UpdatePublicKey");
 

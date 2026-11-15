@@ -2,6 +2,11 @@
 
 What's new in each version. The release page on GitHub shows the section of its version. Earlier versions: [Releases](https://github.com/otazniksk/ShotLite/releases).
 
+## 1.2.4
+
+### Changed
+- About ShotLite links to the new website, [otazniksk.github.io/ShotLite](https://otazniksk.github.io/ShotLite/), and so does ShotLite under Settings → Apps in Windows.
+
 ## 1.2.3
 
 ### Added

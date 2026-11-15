@@ -32,12 +32,15 @@
   -->
   <PropertyGroup>
     <UpdateRepository Condition="'$(UpdateRepository)' == ''">otazniksk/ShotLite</UpdateRepository>
+    <!-- The project website; forks with their own UpdateRepository get none unless they set it. -->
+    <Website Condition="'$(Website)' == '' And '$(UpdateRepository)' == 'otazniksk/ShotLite'">https://otazniksk.github.io/ShotLite/</Website>
     <UpdatePublicKey Condition="'$(UpdatePublicKey)' == '' And '$(UpdateRepository)' == 'otazniksk/ShotLite'">MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAELnycHE/sD0OiW6Qb8pFIrkEXYSb/n/bhSZBa3ph2PBGWvx7hyqdnnsx5KM3A2it6UWbO1wWb5NtZrwu96YL58Q==</UpdatePublicKey>
   </PropertyGroup>
 
   <ItemGroup>
     <AssemblyMetadata Include="UpdateRepository" Value="$(UpdateRepository)" />
     <AssemblyMetadata Include="UpdatePublicKey" Value="$(UpdatePublicKey)" />
+    <AssemblyMetadata Include="Website" Value="$(Website)" />
     <!-- tools/DocShots renders the wiki images from the real UI classes; it is not shipped. -->
     <InternalsVisibleTo Include="DocShots" />
   </ItemGroup>

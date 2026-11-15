@@ -52,7 +52,10 @@ internal sealed class AboutForm : Form
             SystemColors.ControlText, new Padding(24, 18, 24, 6)));
         AddRow(layout, CenteredLabel(Strings.AboutTagline, 9.5F, FontStyle.Regular,
             SystemColors.ControlText, new Padding(24, 4, 24, 4)));
-        AddRow(layout, Link(RepoUrl.Replace("https://", ""), RepoUrl, new Padding(24, 10, 24, 0)));
+        bool website = BuildInfo.WebsiteUrl.Length > 0;
+        if (website)
+            AddRow(layout, Link(BuildInfo.WebsiteUrl.Replace("https://", "").TrimEnd('/'), BuildInfo.WebsiteUrl, new Padding(24, 10, 24, 0)));
+        AddRow(layout, Link(RepoUrl.Replace("https://", ""), RepoUrl, new Padding(24, website ? 2 : 10, 24, 0)));
         AddRow(layout, Link(Strings.AboutLicense, RepoUrl + "/blob/main/LICENSE", new Padding(24, 2, 24, 0)));
         AddRow(layout, TestersLabel());
         AddRow(layout, CenteredLabel(RuntimeText(), 8.5F, FontStyle.Regular,

@@ -15,6 +15,7 @@
 #define AppName "ShotLite"
 #define AppExe "ShotLite.exe"
 #define RepoUrl "https://github.com/otazniksk/ShotLite"
+#define WebsiteUrl "https://otazniksk.github.io/ShotLite/"
 
 [Setup]
 ; Never change AppId: Windows uses it to recognise upgrades and the uninstaller.
@@ -24,7 +25,7 @@ AppVersion={#Version}
 AppVerName={#AppName} {#Version}
 AppPublisher=Michal Škop
 AppCopyright=Copyright © 2026 Michal Škop · MIT License
-AppPublisherURL={#RepoUrl}
+AppPublisherURL={#WebsiteUrl}
 AppSupportURL={#RepoUrl}/issues
 AppUpdatesURL={#RepoUrl}/releases
 VersionInfoVersion={#NumericVersion}
