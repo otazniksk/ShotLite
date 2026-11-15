@@ -344,7 +344,7 @@ internal sealed class Shots
     {
         using var icon = AppIcon.Load(SystemInformation.IconSize);
         // The folders of a made-up user, not the real paths of the PC it runs on.
-        var settings = new AppSettings { SaveFolder = @"C:\Users\Dana\Pictures\ShotLite", RecordFolder = @"C:\Users\Dana\Videos\ShotLite" };
+        var settings = new AppSettings { SaveFolder = @"C:\Users\Example\Pictures\ShotLite", RecordFolder = @"C:\Users\Example\Videos\ShotLite" };
         using var form = new SettingsForm(settings, icon) { StartPosition = FormStartPosition.Manual, Location = new Point(-4000, -4000) };
         form.Show();
         Application.DoEvents();
