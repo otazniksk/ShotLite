@@ -38,6 +38,8 @@
   <ItemGroup>
     <AssemblyMetadata Include="UpdateRepository" Value="$(UpdateRepository)" />
     <AssemblyMetadata Include="UpdatePublicKey" Value="$(UpdatePublicKey)" />
+    <!-- tools/DocShots renders the wiki images from the real UI classes; it is not shipped. -->
+    <InternalsVisibleTo Include="DocShots" />
   </ItemGroup>
 
   <ItemGroup>

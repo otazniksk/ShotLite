@@ -5,7 +5,7 @@
 A lightweight tool for screenshots and screen recording on Windows. It was created as a replacement for the no longer supported **Lightshot 5.5.0.7**. It works the same way (PrtScr → select an area → draw → copy/save), but **without telemetry and without uploading to prntscr.com**. On top of that it records the screen to MP4 or GIF.
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="ShotLite editor: selection with arrows, rectangle, black-out, frosted glass and highlighter" width="640">
+  <img src="docs/overview.gif" alt="ShotLite in action: select an area, add an arrow, highlight a sentence, black out a name, add a note and copy" width="800">
 </p>
 
 ## Download
@@ -17,6 +17,15 @@ A lightweight tool for screenshots and screen recording on Windows. It was creat
 Windows 10/11 x64. The .NET runtime is included. Screen recording needs Windows 10 version 2004 or newer.
 
 The installed app offers new versions in the tray menu. One click downloads the update (the menu shows the progress), a second click on Restart and update installs it and starts the new version. Or it all happens automatically if you turn that on in the settings. Every update is checked against a digital signature before it runs. The portable version links to the download instead.
+
+## In action
+
+Hide private data in three styles (hold the Black out button to pick one), and add text in the size you need (hold T).
+
+<p align="center">
+  <img src="docs/black-out.gif" alt="Black out, frosted glass and pixelate hide a password, an API key and a card number" width="400">
+  <img src="docs/text.gif" alt="Text: hold T to pick the size, click and type" width="400">
+</p>
 
 ## Controls
 

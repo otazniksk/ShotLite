@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lumen Notes</title>
+<!-- Fictional page for the wiki screenshots; no real brand or data. -->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.6 "Segoe UI", sans-serif; color: #1f2937; background: #eef2f7; }
+  .chrome { height: 44px; background: #dfe3ea; display: flex; align-items: center; gap: 10px; padding: 0 16px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: #c3c9d4; }
+  .url { flex: 1; margin-left: 12px; height: 28px; border-radius: 14px; background: #fff; color: #6b7280; font-size: 13px; display: flex; align-items: center; padding: 0 14px; }
+  header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 14px 48px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-weight: 700; font-size: 20px; color: #4f46e5; }
+  nav a { margin-left: 24px; color: #4b5563; text-decoration: none; font-size: 15px; }
+  main { display: grid; grid-template-columns: 1fr 300px; gap: 32px; padding: 32px 48px; }
+  article { background: #fff; border-radius: 12px; padding: 32px 40px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; color: #4f46e5; background: #eef2ff; border-radius: 999px; padding: 2px 10px; }
+  h1 { font-size: 32px; line-height: 1.25; margin: 12px 0 6px; }
+  .meta { color: #6b7280; font-size: 14px; margin-bottom: 20px; }
+  .hero { height: 190px; border-radius: 10px; margin-bottom: 20px;
+          background: radial-gradient(circle at 25% 60%, #fbbf24 0 38px, transparent 39px),
+                      linear-gradient(160deg, #6366f1 0%, #8b5cf6 45%, #ec4899 100%); position: relative; overflow: hidden; }
+  .hero::after { content: ""; position: absolute; left: -40px; right: -40px; bottom: -70px; height: 140px; border-radius: 50%; background: #312e81; opacity: .55; }
+  p { margin: 0 0 14px; }
+  aside .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); margin-bottom: 20px; }
+  aside h3 { margin: 0 0 10px; font-size: 15px; }
+  .row { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { display: none; } } /* the 800 px GIF scene */
+  .btn { display: block; text-align: center; background: #4f46e5; color: #fff; border-radius: 8px; padding: 10px; font-weight: 600; margin-top: 14px; }
+</style>
+</head>
+<body>
+  <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="url">lumen-notes.example/guides/better-screenshots</div></div>
+  <header><span class="logo">Lumen Notes</span><nav><a>Guides</a><a>Tools</a><a>Community</a><a>About</a></nav></header>
+  <main>
+    <article>
+      <span class="tag">GUIDE</span>
+      <h1>Five habits for clearer screenshots</h1>
+      <div class="meta">By Dana Rivers · 6 min read · Updated March 12</div>
+      <div class="hero"></div>
+      <p>A good screenshot answers one question at a glance. Crop to what matters, point at the detail with an arrow and keep everything else calm.</p>
+      <p>Highlight the sentence people should read first, and hide anything private before you share the image.</p>
+    </article>
+    <aside>
+      <div class="card">
+        <h3>Release checklist</h3>
+        <div class="row"><span>Crop to the window</span><span>✓</span></div>
+        <div class="row"><span>Point at the change</span><span>✓</span></div>
+        <div class="row"><span>Hide private data</span><span>✓</span></div>
+        <div class="row"><span>Add a short note</span><span>—</span></div>
+        <span class="btn">Download template</span>
+      </div>
+      <div class="card">
+        <h3>Popular this week</h3>
+        <div class="row"><span>Annotating like a pro</span></div>
+        <div class="row"><span>GIFs that explain</span></div>
+        <div class="row"><span>Keyboard shortcuts</span></div>
+      </div>
+    </aside>
+  </main>
+</body>
+</html>
