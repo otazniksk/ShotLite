@@ -92,7 +92,7 @@ internal sealed class TrayContext : ApplicationContext
 
         _notifier = new Notifier(_tray, () => _settings.ShowNotifications);
         _actions = new ImageActions(_settings, _notifier);
-        _actions.UploadFinished += LaunchUpdateWhenIdle;
+        _actions.WorkFinished += LaunchUpdateWhenIdle;
         _hotkeys.Pressed += OnHotkey;
 
         // Follow the registry (the installer may have enabled autostart) and refresh the path in case the exe moved.
@@ -190,11 +190,11 @@ internal sealed class TrayContext : ApplicationContext
         return true;
     }
 
-    /// <summary>Never interrupts work: with a recording, the overlay or settings open it waits until they're closed.</summary>
+    /// <summary>Never interrupts work: with a recording, the overlay, settings, an upload or text recognition it waits until they finish.</summary>
     private void LaunchUpdateWhenIdle()
     {
         if (_updateInstaller is not { } installer || _update == null
-            || _recording != null || _overlay != null || _settingsOpen || _actions.IsUploading)
+            || _recording != null || _overlay != null || _settingsOpen || _actions.IsBusy)
             return;
 
         _updateInstaller = null;
