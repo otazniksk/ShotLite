@@ -116,6 +116,9 @@ public sealed class AppSettings
     public int ColorArgb { get; set; } = Color.FromArgb(255, 229, 57, 53).ToArgb();
     public float PenWidth { get; set; } = 3;
 
+    /// <summary>Font size of the text tool in pixels at 100 % scaling, independent of the pen width.</summary>
+    public float TextSize { get; set; } = 20;
+
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public RedactStyle RedactStyle { get; set; } = RedactStyle.Black;
 

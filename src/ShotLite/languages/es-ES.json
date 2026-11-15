@@ -10,7 +10,7 @@
   "RedactFrosted": "Cristal esmerilado",
   "RedactPixelate": "Pixelar",
   "ToolMarker": "Resaltador (M)",
-  "ToolText": "Texto (T)",
+  "ToolText": "Texto (T) · mantén pulsado para elegir el tamaño",
   "ToolColor": "Color",
   "ToolUndo": "Deshacer (Ctrl+Z)",
   "ActionUpload": "Subir al servidor (Ctrl+U)",

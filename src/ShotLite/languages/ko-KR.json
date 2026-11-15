@@ -10,7 +10,7 @@
   "RedactFrosted": "반투명 유리",
   "RedactPixelate": "모자이크",
   "ToolMarker": "형광펜 (M)",
-  "ToolText": "텍스트 (T)",
+  "ToolText": "텍스트 (T) · 길게 눌러 크기 선택",
   "ToolColor": "색상",
   "ToolUndo": "실행 취소 (Ctrl+Z)",
   "ActionUpload": "서버에 업로드 (Ctrl+U)",

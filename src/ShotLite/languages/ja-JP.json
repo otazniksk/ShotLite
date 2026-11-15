@@ -10,7 +10,7 @@
   "RedactFrosted": "すりガラス",
   "RedactPixelate": "モザイク",
   "ToolMarker": "蛍光ペン (M)",
-  "ToolText": "テキスト (T)",
+  "ToolText": "テキスト (T) · 長押しでサイズを選択",
   "ToolColor": "色",
   "ToolUndo": "元に戻す (Ctrl+Z)",
   "ActionUpload": "サーバーにアップロード (Ctrl+U)",

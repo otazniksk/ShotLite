@@ -10,7 +10,7 @@
   "RedactFrosted": "Frosted glass",
   "RedactPixelate": "Pixelate",
   "ToolMarker": "Highlighter (M)",
-  "ToolText": "Text (T)",
+  "ToolText": "Text (T) · hold to choose a size",
   "ToolColor": "Color",
   "ToolUndo": "Undo (Ctrl+Z)",
   "ActionUpload": "Upload to server (Ctrl+U)",

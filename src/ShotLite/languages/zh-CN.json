@@ -10,7 +10,7 @@
   "RedactFrosted": "毛玻璃",
   "RedactPixelate": "像素化",
   "ToolMarker": "荧光笔 (M)",
-  "ToolText": "文字 (T)",
+  "ToolText": "文字 (T) · 按住可选择大小",
   "ToolColor": "颜色",
   "ToolUndo": "撤销 (Ctrl+Z)",
   "ActionUpload": "上传到服务器 (Ctrl+U)",
