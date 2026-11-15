@@ -1,0 +1,59 @@
+# The project website (site/) on GitHub Pages: https://otazniksk.github.io/ShotLite/
+# Runs only when the website can change: a push to main that touches site/ or the README GIFs it uses,
+# a finished Build (a new release brings a new version number and installer size), or a manual run.
+# The page has {{VERSION}} and {{SIZE}} placeholders filled from the latest release.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "docs/*.gif", ".github/workflows/pages.yml"]
+  workflow_run:
+    workflows: [Build]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # After Build only when a pushed tag built successfully, i.e. a release was published (not a manual run).
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Build the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p _site/assets
+          cp -r site/. _site/
+          cp docs/*.gif _site/assets/
+          release=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest")
+          version=$(jq -r '.tag_name | ltrimstr("v")' <<<"$release")
+          bytes=$(jq -r '[.assets[] | select(.name == "ShotLite-install.exe") | .size][0] // empty' <<<"$release")
+          if [ -z "$version" ] || [ -z "$bytes" ]; then echo "No release with ShotLite-install.exe found." >&2; exit 1; fi
+          size=$(( (bytes + 524288) / 1048576 )) # MB as Windows shows them
+          sed -i "s/{{VERSION}}/$version/g; s/{{SIZE}}/$size/g" _site/index.html
+          if grep -n '{{[A-Z]*}}' _site/index.html; then echo "Unfilled placeholder." >&2; exit 1; fi
+          echo "ShotLite $version, installer $size MB"
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v5

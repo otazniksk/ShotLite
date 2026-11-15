@@ -1,0 +1,502 @@
+<!doctype html>
+<!-- Built by .github/workflows/pages.yml: {{VERSION}} and {{SIZE}} come from the latest release, the GIFs from docs/. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShotLite – screenshots that say exactly what you mean</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ShotLite – screenshots and screen recording for Windows">
+<meta property="og:description" content="Select, mark up, hide what's private, copy text and record MP4 or GIF. Free, open source, no telemetry.">
+<meta property="og:image" content="https://otazniksk.github.io/ShotLite/assets/overview.gif">
+<meta property="og:url" content="https://otazniksk.github.io/ShotLite/">
+<meta name="description" content="A lightweight screenshot and screen recording tool for Windows. Select, mark up, hide what's private, copy text, record MP4 or GIF. Free, open source, no telemetry.">
+<script>document.documentElement.classList.add("js")</script>
+<style>
+  :root {
+    --blue: #3884ff; --violet: #8b3dff; --amber: #ffc93c; --red: #e53935;
+    --bg: #0b0d1a; --bg-2: #11142a; --card: #151937; --line: rgba(255,255,255,.08);
+    --text: #eef0ff; --muted: #a3a8cc; --dim: #8b91bd;
+    --grad: linear-gradient(135deg, var(--blue), var(--violet));
+    --radius: 20px;
+    --font: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "Cascadia Code", Consolas, ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font: 17px/1.6 var(--font); color: var(--text); background: var(--bg); overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; height: auto; display: block; }
+  .wrap { width: min(1180px, 100% - 40px); margin-inline: auto; }
+
+  /* ---------- aurora background ---------- */
+  .aurora { position: absolute; inset: 0 0 auto 0; height: 1100px; overflow: hidden; pointer-events: none; z-index: 0; }
+  .aurora span { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .55; animation: drift 18s ease-in-out infinite alternate; }
+  .aurora .a1 { width: 620px; height: 620px; background: var(--blue); left: -160px; top: -200px; }
+  .aurora .a2 { width: 560px; height: 560px; background: var(--violet); right: -140px; top: 40px; animation-delay: -6s; }
+  .aurora .a3 { width: 300px; height: 300px; background: var(--amber); left: 45%; top: 520px; opacity: .18; animation-delay: -12s; }
+  @keyframes drift { to { transform: translate(60px, 40px) scale(1.08); } }
+  .grid-bg { position: absolute; inset: 0; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+             background-size: 56px 56px; mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 30%, transparent 75%); }
+
+  /* ---------- nav ---------- */
+  nav { position: sticky; top: 0; z-index: 50; backdrop-filter: blur(14px); background: rgba(11,13,26,.6); border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; gap: 28px; height: 68px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; letter-spacing: -.01em; }
+  .brand svg { width: 32px; height: 32px; }
+  nav .links { display: flex; gap: 26px; margin-left: auto; font-size: 15px; color: var(--muted); }
+  nav .links a:hover { color: var(--text); }
+  .btn { display: inline-flex; align-items: center; gap: 10px; border-radius: 12px; padding: 12px 20px; font-weight: 600; font-size: 15px; transition: transform .15s, box-shadow .15s, background .15s; white-space: nowrap; }
+  .btn:hover { transform: translateY(-2px); }
+  .btn-primary { background: linear-gradient(135deg, #2a6ae8, #7b34ee); color: #fff; box-shadow: 0 10px 30px -8px rgba(139,61,255,.7); }
+  .btn-primary:hover { box-shadow: 0 16px 40px -8px rgba(139,61,255,.85); }
+  .btn-ghost { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: var(--text); }
+  .btn-ghost:hover { background: rgba(255,255,255,.1); }
+  .btn svg { width: 18px; height: 18px; }
+  nav .btn { padding: 9px 16px; }
+
+  /* ---------- hero ---------- */
+  header.hero { position: relative; padding: 90px 0 40px; text-align: center; }
+  header.hero .wrap { position: relative; z-index: 1; }
+  .badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 999px; background: rgba(255,255,255,.06);
+           border: 1px solid rgba(255,255,255,.12); font-size: 14px; color: var(--muted); }
+  a.badge:hover { color: var(--text); border-color: rgba(255,255,255,.3); }
+  .badge b { background: var(--grad); color: #fff; border-radius: 999px; padding: 2px 10px; font-size: 12px; letter-spacing: .02em; }
+  h1 { font-size: clamp(42px, 7vw, 82px); line-height: 1.02; letter-spacing: -.035em; margin: 26px auto 22px; max-width: 980px; font-weight: 800; }
+  .g { background: linear-gradient(100deg, #7fb0ff 0%, #b892ff 55%, var(--amber) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lead { font-size: clamp(18px, 2.2vw, 21px); color: var(--muted); max-width: 680px; margin: 0 auto 36px; }
+  .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .meta { margin-top: 18px; font-size: 14px; color: var(--dim); display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+  .meta span::before { content: "✓"; color: #7ee2a8; margin-right: 6px; font-weight: 700; }
+
+  .stage { position: relative; margin: 70px auto 0; max-width: 802px; }
+  .stage::before { content: ""; position: absolute; inset: 8% 6% -6%; background: var(--grad); filter: blur(70px); opacity: .55; border-radius: 40px; }
+  .window { position: relative; border-radius: 16px; overflow: hidden; background: #1a1e3c; border: 1px solid rgba(255,255,255,.14);
+            box-shadow: 0 40px 100px -20px rgba(0,0,0,.8); }
+  .window .bar { height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 16px; background: #20254a; border-bottom: 1px solid var(--line); }
+  .window .bar i { width: 11px; height: 11px; border-radius: 50%; background: #3a4170; }
+  .window .bar em { margin-left: 12px; font: 12px var(--mono); color: var(--dim); font-style: normal; }
+  .chip { position: absolute; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; font-size: 14px; font-weight: 600;
+          background: rgba(21,25,55,.85); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.14); box-shadow: 0 18px 40px -12px rgba(0,0,0,.6);
+          animation: float 6s ease-in-out infinite; }
+  .chip .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 14px; }
+  .chip.c1 { left: -120px; top: 22%; } .chip.c1 .ic { background: rgba(126,226,168,.15); color: #7ee2a8; }
+  .chip.c2 { right: -130px; top: 48%; animation-delay: -2s; } .chip.c2 .ic { background: rgba(255,201,60,.15); color: var(--amber); }
+  .chip.c3 { left: -90px; bottom: 10%; animation-delay: -4s; } .chip.c3 .ic { background: rgba(56,132,255,.18); color: #8db8ff; }
+  @keyframes float { 50% { transform: translateY(-10px); } }
+
+  /* ---------- steps ---------- */
+  .steps { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 110px auto 0; }
+  .step { padding: 22px; border-radius: 16px; background: rgba(255,255,255,.03); border: 1px solid var(--line); }
+  .step .n { font: 600 13px var(--mono); color: var(--dim); }
+  .step h3 { margin: 10px 0 6px; font-size: 19px; }
+  .step p { margin: 0; color: var(--muted); font-size: 15px; }
+  kbd { font: 600 13px var(--mono); padding: 3px 8px; border-radius: 7px; background: linear-gradient(#2a2f5c, #1c2045); border: 1px solid rgba(255,255,255,.16);
+        border-bottom-width: 3px; color: #fff; white-space: nowrap; }
+
+  /* ---------- sections ---------- */
+  section { padding: 130px 0 0; position: relative; }
+  .eyebrow { font: 600 13px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: #9ab8ff; }
+  h2 { font-size: clamp(32px, 4.6vw, 52px); line-height: 1.08; letter-spacing: -.03em; margin: 12px 0 16px; max-width: 760px; }
+  .sub { color: var(--muted); max-width: 620px; margin: 0 0 50px; font-size: 18px; }
+
+  .bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; }
+  .card { position: relative; border-radius: var(--radius); background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+          border: 1px solid var(--line); padding: 28px; overflow: hidden; transition: border-color .2s, transform .2s; }
+  .card:hover { border-color: rgba(139,61,255,.45); transform: translateY(-3px); }
+  .card h3 { margin: 14px 0 8px; font-size: 22px; letter-spacing: -.01em; }
+  .card p { margin: 0; color: var(--muted); font-size: 15.5px; }
+  .card .icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: rgba(255,255,255,.06); border: 1px solid var(--line); }
+  .card .icon svg { width: 22px; height: 22px; }
+  .card .shot { margin-top: 22px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.1); }
+  .span-3 .shot img { width: 100%; aspect-ratio: 4/3; object-fit: cover; object-position: 28% 40%; }
+  .span-4 { grid-column: span 4; } .span-3 { grid-column: span 3; } .span-2 { grid-column: span 2; }
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .tag { font-size: 13px; padding: 5px 11px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid var(--line); color: var(--muted); }
+  .tag.on { color: #fff; background: rgba(139,61,255,.25); border-color: rgba(139,61,255,.5); }
+  .big-num { font-size: 64px; font-weight: 800; letter-spacing: -.04em; line-height: 1; margin-top: 18px;
+             background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  .ocr { margin-top: 20px; display: grid; gap: 10px; }
+  .ocr-src { position: relative; padding: 14px 16px; border-radius: 12px; background: #f1f2f8; color: #1f2333; font: 600 14px/1.5 var(--font); }
+  .ocr-src .sel { position: absolute; inset: 6px; border: 1.5px dashed #3884ff; border-radius: 6px; }
+  .ocr-arrow { font: 600 12px var(--mono); color: var(--dim); text-align: center; }
+  .ocr-out { padding: 12px 16px; border-radius: 12px; background: rgba(0,0,0,.3); border: 1px solid var(--line); font: 13.5px/1.6 var(--mono); color: #cfe0ff; display: grid; }
+  .ocr-out i { width: 8px; height: 16px; background: #8db8ff; animation: blink 1s steps(2) infinite; margin-top: 2px; }
+  .tray { margin-top: 20px; border-radius: 12px; background: #f6f6f8; padding: 6px; font-size: 14px; color: #222; box-shadow: 0 12px 30px -10px rgba(0,0,0,.6); }
+  .tray .row { padding: 6px 12px; } .tray .row:first-child { font-weight: 600; }
+  .tray .upd { margin-top: 4px; padding: 8px 12px; border-radius: 6px; background: #c9f2d4; border: 1px solid #8fd8a5; font-weight: 600; color: #134b23; }
+  .code { margin: 20px 0 0; padding: 14px 16px; border-radius: 12px; background: rgba(0,0,0,.3); border: 1px solid var(--line); font: 13px/1.6 var(--mono); color: #cfd3f5; white-space: pre-wrap; }
+  .code .k { color: #ffc93c; } .code .d { color: #7ee2a8; } .code .s { color: #b892ff; }
+
+  /* recording */
+  .rec { display: grid; grid-template-columns: 1.05fr .95fr; gap: 50px; align-items: center; }
+  .rec-visual { position: relative; border-radius: 20px; aspect-ratio: 16/10; background: radial-gradient(circle at 30% 30%, #26306a, #12152e 70%);
+                border: 1px solid var(--line); overflow: hidden; }
+  .rec-frame { position: absolute; inset: 16% 14% 24% 12%; border: 2px solid var(--red); border-radius: 4px; box-shadow: 0 0 0 9999px rgba(0,0,0,.25); }
+  .rec-frame::before { content: "● REC"; position: absolute; top: -30px; left: -2px; font: 700 12px var(--mono); color: #fff; background: var(--red); padding: 4px 9px; border-radius: 6px;
+                       animation: blink 1.4s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .55; } }
+  .rec-bar { position: absolute; left: 50%; bottom: 9%; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 9px 12px 9px 16px;
+             background: rgba(15,17,36,.92); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; font: 600 15px var(--mono); }
+  .rec-bar .stop { width: 30px; height: 30px; border-radius: 8px; background: var(--red); display: grid; place-items: center; }
+  .rec-bar .stop::after { content: ""; width: 10px; height: 10px; background: #fff; border-radius: 2px; }
+  .lines span { position: absolute; height: 10px; border-radius: 6px; background: rgba(255,255,255,.12); }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 28px; }
+  .compare div { padding: 18px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+  .compare b { display: block; font-size: 18px; margin-bottom: 6px; }
+  .compare ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 15px; }
+
+  /* shortcuts */
+  .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .key { padding: 22px; border-radius: 16px; background: rgba(255,255,255,.035); border: 1px solid var(--line); }
+  .key .combo { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .key .combo kbd { font-size: 15px; padding: 6px 11px; }
+  .key span { color: var(--muted); font-size: 15px; }
+  .toolrow { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  .toolrow div { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,.035); border: 1px solid var(--line); font-size: 15px; }
+
+  /* why */
+  .why { border-radius: 24px; overflow: hidden; border: 1px solid var(--line); background: rgba(255,255,255,.02); }
+  .why table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  .why th, .why td { padding: 18px 26px; text-align: left; border-bottom: 1px solid var(--line); }
+  .why tr:last-child td { border-bottom: 0; }
+  .why thead th { font-size: 14px; letter-spacing: .04em; color: var(--muted); background: rgba(255,255,255,.03); font-weight: 600; }
+  .why th:first-child { width: 38%; } .why th.us { width: 36%; }
+  .why th.us { color: #fff; } .why th.us span { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 800; font-size: 16px; }
+  .why td { color: var(--muted); }
+  .why td.us { color: var(--text); font-weight: 600; background: linear-gradient(90deg, rgba(56,132,255,.08), rgba(139,61,255,.08)); }
+  .why .y { color: #7ee2a8; font-weight: 800; margin-right: 8px; } .why .n { color: #ff7b78; font-weight: 800; }
+  .why tbody tr:hover td { background-color: rgba(255,255,255,.025); }
+  @media (max-width: 700px) { .why th, .why td { padding: 14px 12px; font-size: 14px; } .why th:first-child { width: auto; } }
+
+  /* privacy */
+  .privacy { border-radius: 28px; padding: 60px; background: radial-gradient(circle at 100% 0%, rgba(139,61,255,.35), transparent 50%),
+             radial-gradient(circle at 0% 100%, rgba(56,132,255,.3), transparent 55%), var(--bg-2); border: 1px solid var(--line);
+             display: grid; grid-template-columns: 1fr 1fr; gap: 50px; align-items: center; }
+  .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .checks li { display: flex; gap: 14px; align-items: flex-start; padding: 16px 18px; border-radius: 14px; background: rgba(0,0,0,.2); border: 1px solid var(--line); }
+  .checks li i { flex: none; width: 26px; height: 26px; border-radius: 50%; background: rgba(126,226,168,.15); color: #7ee2a8; display: grid; place-items: center; font-style: normal; font-weight: 800; font-size: 14px; }
+  .checks b { display: block; } .checks span { color: var(--muted); font-size: 15px; }
+
+  /* faq */
+  .faq { max-width: 860px; margin: 0 auto; display: grid; gap: 12px; }
+  .faq-head { text-align: center; } .faq-head h2, .faq-head .sub { margin-inline: auto; }
+  .faq details { border-radius: 16px; background: rgba(255,255,255,.035); border: 1px solid var(--line); padding: 0 24px; transition: border-color .2s, background .2s; }
+  .faq details[open] { border-color: rgba(139,61,255,.45); background: rgba(139,61,255,.07); }
+  .faq summary { cursor: pointer; list-style: none; padding: 20px 0; font-weight: 600; font-size: 17.5px; color: var(--text); display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; line-height: 1;
+                        color: #fff; background: rgba(255,255,255,.08); transition: transform .2s, background .2s; }
+  .faq details[open] summary::after { transform: rotate(45deg); background: var(--grad); }
+  .faq details p { margin: 0 0 22px; color: var(--muted); font-size: 16px; }
+  .faq details a { color: #9ab8ff; text-decoration: underline; text-underline-offset: 3px; }
+
+  /* final cta */
+  .final { text-align: center; padding: 150px 0 120px; }
+  .final h2 { margin-inline: auto; }
+  .final .sub { margin-inline: auto; }
+  .final .logo-big { width: 96px; height: 96px; margin: 0 auto 26px; filter: drop-shadow(0 20px 40px rgba(139,61,255,.55)); }
+
+  footer { border-top: 1px solid var(--line); padding: 34px 0 50px; color: var(--dim); font-size: 14px; }
+  footer .wrap { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+  footer .links { display: flex; gap: 22px; margin-left: auto; }
+  footer a:hover { color: var(--text); }
+
+  .js .reveal { opacity: 0; transform: translateY(26px); transition: opacity .8s ease, transform .8s ease; }
+  .js .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .js .reveal { opacity: 1; transform: none; } .aurora span, .chip { animation: none; } }
+
+  img.gif { cursor: pointer; }
+  .gifwrap { position: relative; display: block; }
+  .gifwrap .play { position: absolute; right: 12px; bottom: 12px; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer;
+                   background: rgba(11,13,26,.75); color: #fff; display: grid; place-items: center; font-size: 15px; }
+  .gifwrap .play:hover { background: rgba(11,13,26,.92); }
+
+  @media (max-width: 960px) {
+    nav .links { display: none; } nav .btn { margin-left: auto; }
+    .chip { display: none; }
+    .steps, .keys { grid-template-columns: 1fr 1fr; }
+    .bento { grid-template-columns: 1fr; } .span-4, .span-3, .span-2 { grid-column: auto; }
+    .rec, .privacy { grid-template-columns: 1fr; } .privacy { padding: 34px 22px; }
+  }
+  @media (max-width: 560px) { .steps, .keys, .compare { grid-template-columns: 1fr; } section { padding-top: 90px; } header.hero { padding-top: 60px; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3884ff"/><stop offset="1" stop-color="#8b3dff"/></linearGradient>
+    <symbol id="logo" viewBox="0 0 100 100">
+      <rect width="100" height="100" rx="23" fill="url(#lg)"/>
+      <g fill="none" stroke="#fff" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 40V19h21M60 19h21v21M19 60v21h21M60 81h21V60"/>
+      </g>
+      <line x1="67" y1="33" x2="44" y2="56" stroke="#fff" stroke-width="15"/>
+      <circle cx="67" cy="33" r="7.5" fill="#fff"/>
+      <polygon points="38.7,50.7 49.3,61.3 33.5,66.5" fill="#ffc93c"/>
+    </symbol>
+  </defs>
+</svg>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#"><svg><use href="#logo"/></svg>ShotLite</a>
+    <div class="links">
+      <a href="#features">Features</a><a href="#recording">Recording</a><a href="#shortcuts">Shortcuts</a><a href="#why">Why ShotLite</a><a href="#privacy">Privacy</a><a href="#faq">FAQ</a>
+      <a href="https://github.com/otazniksk/ShotLite/wiki">Docs</a><a href="https://github.com/otazniksk/ShotLite">GitHub</a>
+    </div>
+    <a class="btn btn-primary" href="https://github.com/otazniksk/ShotLite/releases/latest/download/ShotLite-install.exe">Download</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="aurora"><div class="grid-bg"></div><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
+  <div class="wrap">
+    <a class="badge" href="https://github.com/otazniksk/ShotLite/releases/latest"><b>NEW {{VERSION}}</b> See what's new</a>
+    <h1>Screenshots that say <span class="g">exactly what you mean.</span></h1>
+    <p class="lead">Press <kbd>PrtScr</kbd>, select, point at what matters and hide what's private. Copy it in a second, or record the screen to MP4 and GIF. Lightweight, free and private by design.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/otazniksk/ShotLite/releases/latest/download/ShotLite-install.exe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>
+        Download for Windows</a>
+      <a class="btn btn-ghost" href="https://github.com/otazniksk/ShotLite/releases/latest/download/ShotLite-portable.zip">Portable .zip</a>
+    </div>
+    <div class="meta"><span>Windows 10 &amp; 11</span><span>No admin rights</span><span>No telemetry</span><span>Open source (MIT)</span></div>
+
+    <div class="stage reveal">
+      <div class="chip c1"><span class="ic">✓</span>Copied to the clipboard</div>
+      <div class="chip c2"><span class="ic">▮</span>Private data hidden</div>
+      <div class="chip c3"><span class="ic">T</span>Text copied with OCR</div>
+      <div class="window">
+        <div class="bar"><i></i><i></i><i></i><em>PrtScr → select → draw → Ctrl+C</em></div>
+        <img src="assets/overview.gif" alt="ShotLite: select an area, add an arrow, highlight, black out a name, add a note and copy" width="800" height="600">
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step reveal"><div class="n">01</div><h3>Press <kbd>PrtScr</kbd></h3><p>The screen freezes, menus and tooltips included.</p></div>
+      <div class="step reveal"><div class="n">02</div><h3>Select</h3><p>Drag an area, or <kbd>Ctrl+A</kbd> for a whole monitor.</p></div>
+      <div class="step reveal"><div class="n">03</div><h3>Mark it up</h3><p>Arrows, boxes, highlighter, text and black-outs.</p></div>
+      <div class="step reveal"><div class="n">04</div><h3>Share</h3><p><kbd>Ctrl+C</kbd> to copy, <kbd>Ctrl+S</kbd> to save. Done.</p></div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="eyebrow reveal">Everything you need, nothing you don't</div>
+    <h2 class="reveal">One shortcut. Seven tools. Zero friction.</h2>
+    <p class="sub reveal">ShotLite does the few things a screenshot tool should do, and does them fast. No accounts, no cloud, no bloat.</p>
+
+    <div class="bento">
+      <article class="card span-4 reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="#ffc93c"><rect x="3" y="9" width="18" height="6" rx="1.5"/></svg></div>
+        <h3>Hide what's private, three ways</h3>
+        <p>Black out passwords, put API keys under frosted glass, pixelate faces and card numbers. The hidden pixels are gone from the image for good.</p>
+        <div class="tags"><span class="tag on">Black out</span><span class="tag">Frosted glass</span><span class="tag">Pixelate</span></div>
+        <div class="shot"><img src="assets/black-out.gif" alt="A password blacked out, an API key under frosted glass and a card number pixelated" loading="lazy"></div>
+      </article>
+      <article class="card span-2 reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#8db8ff" stroke-width="2" stroke-linecap="round"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg></div>
+        <h3>Copy text from anything</h3>
+        <p>Error dialogs, videos, scanned PDFs. Select, press <kbd>Ctrl+Shift+C</kbd> and paste the text. Runs offline on the Windows OCR engine.</p>
+        <div class="ocr">
+          <div class="ocr-src"><span class="sel"></span>Error 0x80070005:<br>Access is denied.</div>
+          <div class="ocr-arrow">Ctrl+Shift+C ↓</div>
+          <div class="ocr-out"><span>Error 0x80070005:</span><span>Access is denied.</span><i></i></div>
+        </div>
+        <div class="tags"><span class="tag">Offline</span><span class="tag">Your Windows languages</span><span class="tag">Black-outs stay hidden</span></div>
+      </article>
+      <article class="card span-3 reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19 19 5m0 0h-8m8 0v8"/></svg></div>
+        <h3>Point at the detail</h3>
+        <p>Pencil, line, arrow, rectangle, highlighter and text in any color. Hold <kbd>Shift</kbd> for straight lines and squares, wheel for thickness.</p>
+        <div class="shot"><img src="assets/editor-tools.png" alt="An arrow, a rectangle, the highlighter, a pencil circle and text" loading="lazy"></div>
+      </article>
+      <article class="card span-3 reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#b892ff" stroke-width="2" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 10h3M8 14h8" stroke-linecap="round"/></svg></div>
+        <h3>Perfect shapes for thumbnails</h3>
+        <p>Lock the selection to 16:9, 9:16, 4:3 or your own ratios. Full size grabs exactly one monitor.</p>
+        <div class="shot"><img src="assets/aspect-ratio.gif" alt="Choosing 16:9 and Full size" loading="lazy"></div>
+      </article>
+      <article class="card span-2 reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#7ee2a8" stroke-width="2" stroke-linecap="round"><path d="M4 12h16M12 4c3 3 3 13 0 16M12 4c-3 3-3 13 0 16"/><circle cx="12" cy="12" r="8"/></svg></div>
+        <h3>Speaks your language</h3>
+        <p>15 languages built in, following Windows automatically. Add your own with one JSON file.</p>
+        <div class="big-num">15</div>
+      </article>
+      <article class="card span-2 reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#ffc93c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div>
+        <h3>Signed updates</h3>
+        <p>New versions in one click from the tray. Every download is verified against the project's signature before it runs.</p>
+        <div class="tray"><div class="row">Take screenshot</div><div class="row">Record screen</div><div class="upd">Restart and update to {{VERSION}}</div></div>
+      </article>
+      <article class="card span-2 reveal">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="#8db8ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 20h14"/></svg></div>
+        <h3>Your server, your links</h3>
+        <p>Optional upload to your own endpoint; the link lands in the clipboard. Nothing ever goes to a third party.</p>
+        <pre class="code"><span class="k">POST</span> /upload  <span class="d">→ 200</span>
+{ "data": { "link":
+  <span class="s">"https://img.example.com/x7.png"</span> } }</pre>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="recording">
+  <div class="wrap rec">
+    <div class="reveal">
+      <div class="eyebrow">Screen recording</div>
+      <h2>Show it instead of explaining it.</h2>
+      <p class="sub" style="margin-bottom:0">Press <kbd>Ctrl+Shift+PrtScr</kbd>, click a monitor or drag an area, and you're recording. The frame and the timer stay out of the video. Press the shortcut again to stop.</p>
+      <div class="compare">
+        <div><b>MP4</b><ul><li>Full resolution, 30 fps</li><li>No length limit</li><li>Tutorials and bug reports</li></ul></div>
+        <div><b>GIF</b><ul><li>Up to 800 px, 15 fps</li><li>Up to 60 seconds</li><li>READMEs, chats, tickets</li></ul></div>
+      </div>
+    </div>
+    <div class="rec-visual reveal" aria-hidden="true">
+      <div class="lines">
+        <span style="left:16%;top:24%;width:40%"></span><span style="left:16%;top:34%;width:62%"></span><span style="left:16%;top:42%;width:55%"></span>
+        <span style="left:16%;top:56%;width:30%;background:rgba(56,132,255,.5)"></span><span style="left:16%;top:64%;width:48%"></span>
+      </div>
+      <div class="rec-frame"></div>
+      <div class="rec-bar"><span style="color:#ff8a87">●</span>00:07 <span style="color:var(--dim)">/ 01:00</span><span class="stop"></span></div>
+    </div>
+  </div>
+</section>
+
+<section id="shortcuts">
+  <div class="wrap">
+    <div class="eyebrow reveal">Keyboard first</div>
+    <h2 class="reveal">Muscle memory from day one.</h2>
+    <p class="sub reveal">If you've used Lightshot, you already know ShotLite. Every global shortcut can be changed in the settings.</p>
+    <div class="keys">
+      <div class="key reveal"><div class="combo"><kbd>PrtScr</kbd></div><span>Select an area</span></div>
+      <div class="key reveal"><div class="combo"><kbd>Shift</kbd><kbd>PrtScr</kbd></div><span>Save the full screen</span></div>
+      <div class="key reveal"><div class="combo"><kbd>Ctrl</kbd><kbd>PrtScr</kbd></div><span>Copy the full screen</span></div>
+      <div class="key reveal"><div class="combo"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>PrtScr</kbd></div><span>Record the screen</span></div>
+    </div>
+    <div class="toolrow reveal">
+      <div><kbd>P</kbd> Pencil</div><div><kbd>L</kbd> Line</div><div><kbd>A</kbd> Arrow</div><div><kbd>R</kbd> Rectangle</div>
+      <div><kbd>B</kbd> Black out</div><div><kbd>M</kbd> Highlighter</div><div><kbd>T</kbd> Text</div><div><kbd>V</kbd> Aspect ratio</div><div><kbd>Ctrl+Z</kbd> Undo</div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="eyebrow reveal">Why ShotLite</div>
+    <h2 class="reveal">Everything you liked about Lightshot. Nothing you didn't.</h2>
+    <p class="sub reveal">Lightshot 5.5 is no longer supported. ShotLite keeps its workflow and adds what was missing.</p>
+    <div class="why reveal" style="overflow-x:auto">
+      <table>
+        <thead><tr><th></th><th class="us"><span>ShotLite</span></th><th>Lightshot 5.5</th></tr></thead>
+        <tbody>
+          <tr><td>PrtScr → select → draw → copy</td><td class="us"><span class="y">✓</span>Same workflow</td><td><span class="y">✓</span></td></tr>
+          <tr><td>Telemetry</td><td class="us"><span class="y">✓</span>None</td><td>Yes</td></tr>
+          <tr><td>Uploads to a public image host</td><td class="us"><span class="y">✓</span>Never; only your own server, if you set one up</td><td>prntscr.com</td></tr>
+          <tr><td>Black out, frosted glass, pixelate</td><td class="us"><span class="y">✓</span></td><td><span class="n">✕</span></td></tr>
+          <tr><td>Copy text (OCR, offline)</td><td class="us"><span class="y">✓</span></td><td><span class="n">✕</span></td></tr>
+          <tr><td>Screen recording to MP4 and GIF</td><td class="us"><span class="y">✓</span></td><td><span class="n">✕</span></td></tr>
+          <tr><td>Still maintained</td><td class="us"><span class="y">✓</span>Signed updates</td><td><span class="n">✕</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="privacy">
+  <div class="wrap">
+    <div class="privacy reveal">
+      <div>
+        <div class="eyebrow">Private by design</div>
+        <h2>Your screen is nobody else's business.</h2>
+        <p class="sub" style="margin-bottom:28px">ShotLite was built as a replacement for the discontinued Lightshot 5.5, keeping the workflow and dropping the tracking and the forced cloud uploads.</p>
+        <a class="btn btn-ghost" href="https://github.com/otazniksk/ShotLite/wiki/Privacy-and-Security">Read what it stores and sends →</a>
+      </div>
+      <ul class="checks">
+        <li><i>✓</i><div><b>No telemetry, no accounts</b><span>No analytics, no tracking, no sign-up. Ever.</span></div></li>
+        <li><i>✓</i><div><b>Nothing leaves your PC</b><span>Screenshots stay local. OCR runs offline in Windows.</span></div></li>
+        <li><i>✓</i><div><b>No administrator rights</b><span>Installs and updates for your user only.</span></div></li>
+        <li><i>✓</i><div><b>Open source, MIT licensed</b><span>Every line is on GitHub, releases are built by GitHub Actions.</span></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="faq-head">
+      <div class="eyebrow reveal">FAQ</div>
+      <h2 class="reveal">Questions, answered.</h2>
+      <p class="sub reveal">The short version. Everything else is in the <a href="https://github.com/otazniksk/ShotLite/wiki" style="color:#9ab8ff">guide</a>.</p>
+    </div>
+    <div class="faq reveal">
+      <details open><summary>Is ShotLite really free?</summary><p>Yes. It's open source under the MIT License, with no paid tier, no ads and no account.</p></details>
+      <details><summary>PrtScr opens the Windows Snipping Tool instead. What now?</summary><p>Windows 11 claims the key by default. ShotLite notices it and offers to turn that Windows setting off with one click, no administrator rights needed.</p></details>
+      <details><summary>Does anything leave my computer?</summary><p>Only an update check against GitHub, which you can turn off, and uploads to your own server if you set one up. Text recognition runs offline. <a href="https://github.com/otazniksk/ShotLite/wiki/Privacy-and-Security">What ShotLite stores and sends</a></p></details>
+      <details><summary>Windows says "Windows protected your PC".</summary><p>The installer isn't signed with a paid certificate yet. Click More info, then Run anyway. App updates are signed with the project's own key and verified before they run.</p></details>
+      <details><summary>Can I use it without installing?</summary><p>Yes. Download the portable zip, unzip it anywhere and run ShotLite.exe. The portable version doesn't update itself; it links to the new download instead.</p></details>
+      <details><summary>How do I update?</summary><p>The installed version shows a new release in the tray menu. One click downloads it, a second click restarts ShotLite on the new version. You can also let it update automatically.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="final">
+  <div class="wrap">
+    <svg class="logo-big reveal"><use href="#logo"/></svg>
+    <h2 class="reveal">Make your next screenshot count.</h2>
+    <p class="sub reveal">Free for everyone. {{SIZE}} MB, no runtime to install, ready in a few seconds.</p>
+    <div class="cta reveal">
+      <a class="btn btn-primary" href="https://github.com/otazniksk/ShotLite/releases/latest/download/ShotLite-install.exe">Download ShotLite</a>
+      <a class="btn btn-ghost" href="https://github.com/otazniksk/ShotLite/wiki">Read the guide</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#" style="font-size:16px"><svg style="width:24px;height:24px"><use href="#logo"/></svg>ShotLite</a>
+    <span>© 2026 <a href="https://github.com/otazniksk" style="color:var(--text)">Michal Škop</a> · Free and open source under the MIT License</span>
+    <div class="links">
+      <a href="https://github.com/otazniksk/ShotLite/releases">Releases</a>
+      <a href="https://github.com/otazniksk/ShotLite/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/otazniksk/ShotLite/wiki">Docs</a>
+      <a href="https://github.com/otazniksk/ShotLite/issues">Issues</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // GIFs can be paused (WCAG 2.2.2): the button freezes the current frame on a canvas; reduced motion starts paused.
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('img[src$=".gif"]').forEach(img => {
+    const wrap = document.createElement('span'); wrap.className = 'gifwrap';
+    img.replaceWith(wrap); wrap.append(img);
+    const button = document.createElement('button'); button.className = 'play'; wrap.append(button);
+    let canvas = null;
+    const set = paused => {
+      if (paused) {
+        canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        canvas.style.cssText = 'width:100%;height:auto;display:block;border-radius:inherit';
+        canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', img.alt);
+        img.hidden = true; wrap.prepend(canvas);
+      } else if (canvas) { canvas.remove(); canvas = null; img.hidden = false; }
+      button.textContent = paused ? '▶' : '❚❚';
+      button.setAttribute('aria-label', paused ? 'Play animation' : 'Pause animation');
+    };
+    button.addEventListener('click', () => set(!canvas));
+    const init = () => set(still);
+    img.complete ? init() : img.addEventListener('load', init, { once: true });
+  });
+
+  const io = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
