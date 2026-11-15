@@ -47,7 +47,9 @@ internal static class Strings
     public static string UploadFailed => Localization.Get(nameof(UploadFailed));
     public static string FirstRun => Localization.Get(nameof(FirstRun));
     public static string HotkeyFailed => Localization.Get(nameof(HotkeyFailed));
-    public static string SnippingWarning => Localization.Get(nameof(SnippingWarning));
+    public static string SnippingFixQuestion => Localization.Get(nameof(SnippingFixQuestion));
+    public static string SnippingFixed => Localization.Get(nameof(SnippingFixed));
+    public static string SnippingFixFailed => Localization.Get(nameof(SnippingFixFailed));
     public static string RecordLimitReached => Localization.Get(nameof(RecordLimitReached));
     public static string RecordFailed => Localization.Get(nameof(RecordFailed));
     public static string RecordInterrupted => Localization.Get(nameof(RecordInterrupted));
@@ -74,6 +76,7 @@ internal static class Strings
     public static string UpdateFailed => Localization.Get(nameof(UpdateFailed));
     public static string UpdateBadSignature => Localization.Get(nameof(UpdateBadSignature));
     public static string MenuExit => Localization.Get(nameof(MenuExit));
+    public static string MenuFixPrintScreen => Localization.Get(nameof(MenuFixPrintScreen));
 
     // Settings
     public static string SettingsTitle => Localization.Get(nameof(SettingsTitle));

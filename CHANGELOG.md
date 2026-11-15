@@ -2,6 +2,11 @@
 
 What's new in each version. The release page on GitHub shows the section of its version. Earlier versions: [Releases](https://github.com/otazniksk/ShotLite/releases).
 
+## 1.2.2
+
+### Fixed
+- On Windows 11, `PrtScr` could keep opening the Windows screen capture instead of ShotLite, without any warning: Windows uses the key for itself by default. ShotLite now detects it and asks to turn the Windows setting off (no administrator rights needed); the tray menu offers the same fix in red. It works with notifications turned off.
+
 ## 1.2.1
 
 ### Fixed

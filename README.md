@@ -45,6 +45,8 @@ The installed app offers new versions in the tray menu. One click downloads the 
 
 Text: click inside the selection with the Text tool, type, confirm with `Enter` (`Shift+Enter` = new line, `Esc` = cancel).
 
+`PrtScr` opens the Windows screen capture instead? Windows 11 uses the key for itself by default. ShotLite then asks whether to turn off the Windows setting *Use the Print screen key to open screen capture* (no administrator rights needed); until then the tray menu offers it in red. The setting is in Settings → Accessibility → Keyboard if you want it back.
+
 ## Screen recording
 
 - A selected area or one whole monitor, without sound.

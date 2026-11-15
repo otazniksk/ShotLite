@@ -23,10 +23,29 @@ internal static class Autostart
             key.DeleteValue(Strings.AppName, throwOnMissingValue: false);
     }
 
-    /// <summary>True when Windows 11 opens the Snipping Tool on PrtScr, which steals the default hotkey.</summary>
+    private const string KeyboardKey = @"Control Panel\Keyboard";
+    private const string SnippingValue = "PrintScreenKeyForSnippingEnabled";
+
+    /// <summary>True when Windows opens its screen capture (Snipping Tool) on PrtScr, which steals the default hotkey.</summary>
     public static bool PrintScreenOpensSnippingTool()
     {
-        using var key = Registry.CurrentUser.OpenSubKey(@"Control Panel\Keyboard");
-        return key?.GetValue("PrintScreenKeyForSnippingEnabled") is int value && value == 1;
+        using var key = Registry.CurrentUser.OpenSubKey(KeyboardKey);
+        return key?.GetValue(SnippingValue) switch
+        {
+            int value => value == 1,
+            // Windows 11 has it on by default; the value appears only once the user flips the setting.
+            // Windows 10 has the same setting, off by default.
+            _ => Environment.OSVersion.Version.Build >= 22000,
+        };
+    }
+
+    /// <summary>
+    /// Turns off "Use the Print screen key to open screen capture" for the current user (HKCU, no admin rights).
+    /// Windows reads the value on every key press, so it applies at once.
+    /// </summary>
+    public static void DisablePrintScreenSnipping()
+    {
+        using var key = Registry.CurrentUser.CreateSubKey(KeyboardKey);
+        key.SetValue(SnippingValue, 0, RegistryValueKind.DWord);
     }
 }
