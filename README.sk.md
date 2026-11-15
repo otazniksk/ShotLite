@@ -45,6 +45,8 @@ Nainštalovaná aplikácia ponúkne novú verziu v menu v lište. Prvým kliknut
 
 Text: klikni nástrojom Text do výberu, píš, potvrď `Enter` (`Shift+Enter` = nový riadok, `Esc` = zrušiť).
 
+`PrtScr` otvára snímanie obrazovky Windows? Windows 11 si kláves predvolene berie pre seba. ShotLite sa vtedy opýta, či vypnúť vo Windows nastavenie *Na otvorenie snímky obrazovky použite kláves Print Screen* (bez administrátorských práv); dovtedy ponúka opravu červenou položkou v menu v lište. Nájdeš ho v Nastavenia → Zjednodušenie ovládania → Klávesnica, ak ho budeš chcieť späť.
+
 ## Nahrávanie obrazovky
 
 - Vybraná oblasť alebo jeden celý monitor, bez zvuku.
