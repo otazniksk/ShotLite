@@ -15,6 +15,9 @@ internal sealed class HotkeyBox : TextBox
         Width = 170;
     }
 
+    /// <summary>True while the box has focus and records keys; the global hotkeys must be released meanwhile.</summary>
+    public event Action<bool>? EditingChanged;
+
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Keys Hotkey
     {
@@ -45,10 +48,17 @@ internal sealed class HotkeyBox : TextBox
             Text = HotkeyText.Format(_hotkey);
     }
 
+    protected override void OnEnter(EventArgs e)
+    {
+        base.OnEnter(e);
+        EditingChanged?.Invoke(true);
+    }
+
     protected override void OnLeave(EventArgs e)
     {
         base.OnLeave(e);
         Text = HotkeyText.Format(_hotkey);
+        EditingChanged?.Invoke(false);
     }
 
     private void Record(Keys keyData)

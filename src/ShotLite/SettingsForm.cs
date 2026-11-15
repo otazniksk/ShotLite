@@ -36,6 +36,9 @@ internal sealed class SettingsForm : Form
     private readonly TextBox _uploadAuth = new() { Width = 340, UseSystemPasswordChar = true };
     private readonly TextBox _uploadJsonPath = new() { Width = 150 };
 
+    /// <summary>True while a shortcut box records keys, so the global hotkeys don't swallow them.</summary>
+    public event Action<bool>? HotkeyEditingChanged;
+
     /// <param name="settings">A working copy; it is modified only when the user confirms.</param>
     public SettingsForm(AppSettings settings, Icon icon)
     {
@@ -318,6 +321,7 @@ internal sealed class SettingsForm : Form
         enabled.Checked = setting.Enabled;
         enabled.Anchor = AnchorStyles.Left;
         box.Hotkey = setting.Keys;
+        box.EditingChanged += editing => HotkeyEditingChanged?.Invoke(editing);
         _grid.Controls.Add(enabled, 0, _row);
         _grid.Controls.Add(box, 1, _row);
         _row++;
