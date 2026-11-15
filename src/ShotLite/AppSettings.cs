@@ -202,12 +202,20 @@ public sealed class AppSettings
     public AppSettings Clone() =>
         JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(this, JsonOptions), JsonOptions)!;
 
-    public void CopyFrom(AppSettings other)
+    /// <summary>
+    /// Takes over only the values that differ between <paramref name="before"/> and <paramref name="after"/>,
+    /// so what changed elsewhere in the meantime (e.g. the pen color in a capture taken while the settings
+    /// were open) survives.
+    /// </summary>
+    public void CopyChanges(AppSettings before, AppSettings after)
     {
         foreach (var property in typeof(AppSettings).GetProperties())
         {
-            if (property.CanRead && property.CanWrite)
-                property.SetValue(this, property.GetValue(other));
+            if (!property.CanRead || !property.CanWrite)
+                continue;
+            var value = property.GetValue(after);
+            if (JsonSerializer.Serialize(property.GetValue(before), JsonOptions) != JsonSerializer.Serialize(value, JsonOptions))
+                property.SetValue(this, value);
         }
     }
 }

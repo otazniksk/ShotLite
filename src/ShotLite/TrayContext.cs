@@ -332,6 +332,7 @@ internal sealed class TrayContext : ApplicationContext
         _settingsOpen = true;
         try
         {
+            var before = _settings.Clone();
             var working = _settings.Clone();
             using var windowIcon = AppIcon.Load(SystemInformation.IconSize);
             using var form = new SettingsForm(working, windowIcon);
@@ -346,7 +347,7 @@ internal sealed class TrayContext : ApplicationContext
             };
             if (form.ShowDialog() == DialogResult.OK)
             {
-                _settings.CopyFrom(working);
+                _settings.CopyChanges(before, working);
                 _settings.Save();
                 Autostart.Set(_settings.RunAtStartup);
                 Localization.Apply(_settings.Language);
