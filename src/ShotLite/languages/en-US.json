@@ -25,6 +25,7 @@
   "RecordCursor": "Record the mouse cursor",
   "ActionAspect": "Aspect ratio: {0} (V) · hold to choose",
   "AspectFree": "Free",
+  "AspectFullSize": "Full size",
   "Copied": "Screenshot copied to the clipboard.",
   "CopyFailed": "Copying to the clipboard failed: {0}",
   "TextCopied": "Text copied to the clipboard.",

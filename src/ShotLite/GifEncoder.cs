@@ -19,6 +19,15 @@ internal sealed unsafe class GifEncoder : IFrameEncoder
     private const int KeyCount = 1 << 15;
     /// <summary>Share of a frame's pixels (in 1/1000) that may use colors the palette wasn't built from.</summary>
     private const int MaxForeignPerMille = 15;
+    /// <summary>
+    /// Squared RGB distance from which a color counts as distinct: a small red arrow must not become orange.
+    /// Gradients and anti-aliased edges stay well below it and keep sharing palette entries.
+    /// </summary>
+    private const int DistinctDistance = 40 * 40;
+    /// <summary>Pixels a distinct color needs to matter; fewer are noise.</summary>
+    private const int MinDistinctPixels = 3;
+    /// <summary>Palette entries kept for distinct colors with few pixels, which median cut would average away.</summary>
+    private const int DistinctSlots = 16;
 
     private sealed record PendingFrame(Rectangle Bounds, byte[] Pixels, byte[] Palette, long Time);
 
@@ -159,7 +168,9 @@ internal sealed unsafe class GifEncoder : IFrameEncoder
                 if (_counts[key] > 0 && !_inPalette[key])
                     foreign += _counts[key];
             }
-            if (foreign * 1000 <= (long)_keys.Length * MaxForeignPerMille)
+            // Distinct new colors are appended while there is room: the existing indices stay valid,
+            // so the frame still stores only what changed.
+            if (foreign * 1000 <= (long)_keys.Length * MaxForeignPerMille && AddDistinctColors(foreignOnly: true))
                 return false;
         }
 
@@ -179,7 +190,7 @@ internal sealed unsafe class GifEncoder : IFrameEncoder
         }
 
         var boxes = new List<ColorBox> { new() { Keys = used.ToArray(), Population = _keys.Length } };
-        while (boxes.Count < PaletteSize)
+        while (boxes.Count < PaletteSize - DistinctSlots)
         {
             ColorBox? widest = null;
             long widestScore = 0;
@@ -230,6 +241,56 @@ internal sealed unsafe class GifEncoder : IFrameEncoder
             _palette[i * 3 + 2] = Expand(b / population);
         }
         _paletteCount = boxes.Count;
+        AddDistinctColors(foreignOnly: false);
+    }
+
+    /// <summary>
+    /// Gives colors of the frame that are far from every entry an exact entry of their own, most frequent first:
+    /// a small red arrow would otherwise be averaged into orange. After a rebuild it checks the median-cut
+    /// entries; between rebuilds (<paramref name="foreignOnly"/>) only colors the palette doesn't know yet.
+    /// </summary>
+    /// <returns>False when the palette ran out of room, so it has to be rebuilt.</returns>
+    private bool AddDistinctColors(bool foreignOnly)
+    {
+        var distinct = new List<int>();
+        for (int key = 0; key < KeyCount; key++)
+        {
+            if (_counts[key] < MinDistinctPixels || (foreignOnly && _inPalette[key]))
+                continue;
+            int entry = foreignOnly || _map[key] < 0 ? Nearest(key) : _map[key];
+            if (Distance(key, entry) > DistinctDistance)
+                distinct.Add(key);
+        }
+        distinct.Sort((a, b) => _counts[b].CompareTo(_counts[a]));
+        foreach (int key in distinct)
+        {
+            // An entry added just before may already be close enough.
+            short nearest = Nearest(key);
+            if (Distance(key, nearest) <= DistinctDistance)
+            {
+                _map[key] = nearest;
+                _inPalette[key] = true;
+                continue;
+            }
+            if (_paletteCount >= PaletteSize)
+                return false;
+            int i = _paletteCount++;
+            _palette[i * 3] = Expand((key >> 10) & 31);
+            _palette[i * 3 + 1] = Expand((key >> 5) & 31);
+            _palette[i * 3 + 2] = Expand(key & 31);
+            _map[key] = (short)i;
+            _inPalette[key] = true;
+        }
+        return true;
+    }
+
+    /// <summary>Squared RGB distance between a color key and a palette entry.</summary>
+    private int Distance(int key, int index)
+    {
+        int dr = Expand((key >> 10) & 31) - _palette[index * 3];
+        int dg = Expand((key >> 5) & 31) - _palette[index * 3 + 1];
+        int db = Expand(key & 31) - _palette[index * 3 + 2];
+        return dr * dr + dg * dg + db * db;
     }
 
     private ColorBox CreateBox(int[] keys)

@@ -1,5 +1,6 @@
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Drawing.Text;
 
 namespace ShotLite;
 
@@ -228,23 +229,43 @@ internal sealed class RedactAnnotation : Annotation, IDisposable
 
 internal sealed class TextAnnotation : Annotation, IDisposable
 {
-    private const TextFormatFlags Flags =
-        TextFormatFlags.NoPadding
-        | TextFormatFlags.PreserveGraphicsTranslateTransform
-        | TextFormatFlags.PreserveGraphicsClipping;
+    private static readonly StringFormat Format = CreateFormat();
 
     private readonly Point _location;
-    private readonly string _text;
+    private readonly string[] _lines;
     private readonly Font _font;
+    private readonly int _lineHeight;
 
     public TextAnnotation(Color color, Point location, string text, Font font) : base(color, 0)
     {
         _location = location;
-        _text = text;
+        _lines = text.Split(["\r\n", "\n"], StringSplitOptions.None);
         _font = font;
+        // The text box's line height (GDI), so the text stays where it was typed.
+        _lineHeight = TextRenderer.MeasureText("Wg", font, Size.Empty, TextFormatFlags.NoPadding).Height;
     }
 
-    public override void Draw(Graphics g) => TextRenderer.DrawText(g, _text, _font, _location, Color, Flags);
+    /// <summary>
+    /// GDI+ grayscale antialiasing instead of TextRenderer: GDI's ClearType has no real background in a bitmap
+    /// and gives the letters a dark fringe in copied and saved images (and in GIF frames).
+    /// </summary>
+    public override void Draw(Graphics g)
+    {
+        var hint = g.TextRenderingHint;
+        g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
+        using var brush = new SolidBrush(Color);
+        for (int i = 0; i < _lines.Length; i++)
+            g.DrawString(_lines[i], _font, brush, _location.X, _location.Y + i * _lineHeight, Format);
+        g.TextRenderingHint = hint;
+    }
+
+    /// <summary>No padding around the text, like TextFormatFlags.NoPadding.</summary>
+    private static StringFormat CreateFormat()
+    {
+        var format = (StringFormat)StringFormat.GenericTypographic.Clone();
+        format.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces | StringFormatFlags.NoWrap;
+        return format;
+    }
 
     public void Dispose() => _font.Dispose();
 }

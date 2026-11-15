@@ -25,6 +25,7 @@
   "RecordCursor": "Muisaanwijzer opnemen",
   "ActionAspect": "Beeldverhouding: {0} (V) · ingedrukt houden om te kiezen",
   "AspectFree": "Vrij",
+  "AspectFullSize": "Volledig scherm",
   "Copied": "Screenshot gekopieerd naar het klembord.",
   "CopyFailed": "Kopiëren naar het klembord mislukt: {0}",
   "TextCopied": "Tekst gekopieerd naar het klembord.",

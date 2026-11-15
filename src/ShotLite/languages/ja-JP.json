@@ -25,6 +25,7 @@
   "RecordCursor": "マウスカーソルを録画",
   "ActionAspect": "縦横比: {0} (V) · 長押しで選択",
   "AspectFree": "自由",
+  "AspectFullSize": "全画面",
   "Copied": "スクリーンショットをクリップボードにコピーしました。",
   "CopyFailed": "クリップボードへのコピーに失敗しました: {0}",
   "TextCopied": "テキストをクリップボードにコピーしました。",

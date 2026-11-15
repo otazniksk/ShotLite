@@ -25,6 +25,7 @@
   "RecordCursor": "Nahrávat kurzor myši",
   "ActionAspect": "Poměr stran: {0} (V) · podrž pro výběr",
   "AspectFree": "Volný",
+  "AspectFullSize": "Celá obrazovka",
   "Copied": "Snímek zkopírován do schránky.",
   "CopyFailed": "Kopírování do schránky selhalo: {0}",
   "TextCopied": "Text zkopírován do schránky.",

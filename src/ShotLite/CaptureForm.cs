@@ -1261,6 +1261,13 @@ internal sealed class CaptureForm : Form
     private void ShowTextSizeMenu(ToolbarButton button)
     {
         Capture = false;
+        var menu = CreateTextSizeMenu();
+        menu.Closed += (_, _) => BeginInvoke(new Action(menu.Dispose));
+        ShowSideMenu(menu, button);
+    }
+
+    private ContextMenuStrip CreateTextSizeMenu()
+    {
         var menu = new ContextMenuStrip { ShowImageMargin = false, ShowCheckMargin = true };
         foreach (var size in TextSizes)
         {
@@ -1268,8 +1275,7 @@ internal sealed class CaptureForm : Form
             item.Click += (_, _) => SetTextSize(size);
             menu.Items.Add(item);
         }
-        menu.Closed += (_, _) => BeginInvoke(new Action(menu.Dispose));
-        ShowSideMenu(menu, button);
+        return menu;
     }
 
     private void SetTextSize(float size)
@@ -1294,6 +1300,18 @@ internal sealed class CaptureForm : Form
     private void ShowRedactMenu(ToolbarButton button)
     {
         Capture = false;
+        var menu = CreateRedactMenu();
+        menu.Closed += (_, _) => BeginInvoke(new Action(() =>
+        {
+            foreach (ToolStripItem item in menu.Items)
+                item.Image?.Dispose();
+            menu.Dispose();
+        }));
+        ShowSideMenu(menu, button);
+    }
+
+    private ContextMenuStrip CreateRedactMenu()
+    {
         // The style preview replaces the check mark; the checked item gets the highlighted image frame.
         int imageSize = S(20);
         var menu = new ContextMenuStrip
@@ -1314,13 +1332,7 @@ internal sealed class CaptureForm : Form
             item.Click += (_, _) => SetRedactStyle(style);
             menu.Items.Add(item);
         }
-        menu.Closed += (_, _) => BeginInvoke(new Action(() =>
-        {
-            foreach (ToolStripItem item in menu.Items)
-                item.Image?.Dispose();
-            menu.Dispose();
-        }));
-        ShowSideMenu(menu, button);
+        return menu;
     }
 
     private static Bitmap CreateRedactImage(RedactStyle style, int size)
@@ -1354,6 +1366,11 @@ internal sealed class CaptureForm : Form
     private void ShowAspectMenu(ToolbarButton button)
     {
         Capture = false;
+        ShowBarMenu(CreateAspectMenu(), button);
+    }
+
+    private ContextMenuStrip CreateAspectMenu()
+    {
         var menu = new ContextMenuStrip { ShowImageMargin = false, ShowCheckMargin = true };
         var free = new ToolStripMenuItem(Strings.AspectFree) { Checked = _aspect == null };
         free.Click += (_, _) => SetAspect(null);
@@ -1364,7 +1381,26 @@ internal sealed class CaptureForm : Form
             item.Click += (_, _) => SetAspect(aspect);
             menu.Items.Add(item);
         }
-        ShowBarMenu(menu, button);
+        menu.Items.Add(new ToolStripSeparator());
+        // The monitor the selection is on (the cursor is at the menu, which may reach onto the next monitor).
+        var fullSize = new ToolStripMenuItem(Strings.AspectFullSize)
+        {
+            ShortcutKeyDisplayString = "Ctrl+A",
+            Enabled = _annotations.Count == 0,
+        };
+        fullSize.Click += (_, _) => SelectMonitor(Screen.FromRectangle(RectangleToScreen(_selection)));
+        menu.Items.Add(fullSize);
+        // The open menu has the keyboard: Ctrl+A shown next to Full size has to work here too.
+        menu.KeyDown += (_, e) =>
+        {
+            if (e.KeyData == (Keys.Control | Keys.A) && fullSize.Enabled)
+            {
+                e.Handled = e.SuppressKeyPress = true;
+                menu.Close();
+                fullSize.PerformClick();
+            }
+        };
+        return menu;
     }
 
     /// <summary>Opens a menu under the button of the action bar, or above it where there's no room.</summary>
@@ -1427,13 +1463,15 @@ internal sealed class CaptureForm : Form
         RefreshVisual();
     }
 
-    private void SelectMonitorUnderCursor()
+    private void SelectMonitorUnderCursor() => SelectMonitor(Screen.FromPoint(MousePosition));
+
+    private void SelectMonitor(Screen screen)
     {
         if (_annotations.Count > 0)
             return;
         // A whole monitor is its own shape, so handles dragged afterwards shouldn't snap to the old ratio.
         SetAspect(null);
-        _selection = Rectangle.Intersect(RectangleToClient(Screen.FromPoint(MousePosition).Bounds), ClientRectangle);
+        _selection = Rectangle.Intersect(RectangleToClient(screen.Bounds), ClientRectangle);
         RefreshVisual();
     }
 
@@ -1497,6 +1535,63 @@ internal sealed class CaptureForm : Form
             payload = _actions.EncodeForUpload(image);
         Close();
         _ = _actions.UploadAsync(payload);
+    }
+
+    // ---------------------------------------------------------------- documentation (tools/DocShots)
+
+    /// <summary>The frozen screenshot, for annotations that read its pixels (black-out).</summary>
+    internal Bitmap DocsShot => _shot;
+
+    /// <summary>Puts the overlay into a state for the documentation generator; the app itself never calls it.</summary>
+    /// <param name="creating">The selection is being dragged out: no toolbars yet.</param>
+    internal void DocsSetState(Rectangle selection, IEnumerable<Annotation> annotations, Tool tool = Tool.None,
+        ToolbarAction? hover = null, RedactStyle? redactStyle = null, bool creating = false)
+    {
+        _selection = selection;
+        _drag = creating ? DragMode.Creating : DragMode.None;
+        _annotations.Clear();
+        _annotations.AddRange(annotations);
+        _tool = tool;
+        if (redactStyle is { } style)
+            _redactStyle = style;
+        LayoutToolbars();
+        _hover = hover is { } action ? _buttons.FirstOrDefault(b => b.Action == action) : null;
+    }
+
+    internal Rectangle DocsButtonBounds(ToolbarAction action) => _buttons.First(b => b.Action == action).Bounds;
+
+    internal Rectangle DocsToolBar => _verticalBar;
+    internal Rectangle DocsActionBar => _horizontalBar;
+
+    /// <summary>The menu a held button opens, not shown; the caller disposes it.</summary>
+    internal ContextMenuStrip DocsMenu(ToolbarAction action) => action switch
+    {
+        ToolbarAction.Redact => CreateRedactMenu(),
+        ToolbarAction.Text => CreateTextSizeMenu(),
+        ToolbarAction.Aspect => CreateAspectMenu(),
+        _ => throw new ArgumentOutOfRangeException(nameof(action)),
+    };
+
+    /// <summary>Changes what the menus and the buttons show, as a click in a menu would.</summary>
+    internal void DocsSetOptions(RedactStyle? redactStyle = null, float? textSize = null, AspectRatio? aspect = null, bool freeAspect = false)
+    {
+        if (redactStyle is { } style)
+            _redactStyle = style;
+        if (textSize is { } size)
+            _textSize = size;
+        if (aspect != null || freeAspect)
+            _aspect = aspect;
+    }
+
+    /// <summary>Paints the overlay into a new bitmap without showing it.</summary>
+    internal Bitmap DocsRender()
+    {
+        // Opaque: ClearType text can't be drawn cleanly onto a bitmap with transparency.
+        var image = new Bitmap(ClientSize.Width, ClientSize.Height, PixelFormat.Format24bppRgb);
+        image.SetResolution(96, 96);
+        using var g = Graphics.FromImage(image);
+        OnPaint(new PaintEventArgs(g, new Rectangle(Point.Empty, ClientSize)));
+        return image;
     }
 
     // ---------------------------------------------------------------- keyboard

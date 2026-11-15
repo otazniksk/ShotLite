@@ -25,6 +25,7 @@
   "RecordCursor": "Gravar o cursor do mouse",
   "ActionAspect": "Proporção: {0} (V) · segure para escolher",
   "AspectFree": "Livre",
+  "AspectFullSize": "Tela cheia",
   "Copied": "Captura copiada para a área de transferência.",
   "CopyFailed": "Falha ao copiar para a área de transferência: {0}",
   "TextCopied": "Texto copiado para a área de transferência.",

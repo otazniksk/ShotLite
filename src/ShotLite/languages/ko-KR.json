@@ -25,6 +25,7 @@
   "RecordCursor": "마우스 커서 녹화",
   "ActionAspect": "화면 비율: {0} (V) · 길게 눌러 선택",
   "AspectFree": "자유",
+  "AspectFullSize": "전체 화면",
   "Copied": "스크린샷을 클립보드에 복사했습니다.",
   "CopyFailed": "클립보드에 복사하지 못했습니다: {0}",
   "TextCopied": "텍스트를 클립보드에 복사했습니다.",

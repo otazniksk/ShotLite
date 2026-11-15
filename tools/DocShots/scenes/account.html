@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lumen Cloud – Account</title>
+<!-- Fictional page for the wiki screenshots; every value is made up. -->
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 "Segoe UI", sans-serif; color: #1f2937; background: #f3f4f6; }
+  .chrome { height: 44px; background: #dfe3ea; display: flex; align-items: center; gap: 10px; padding: 0 16px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: #c3c9d4; }
+  .url { flex: 1; margin-left: 12px; height: 28px; border-radius: 14px; background: #fff; color: #6b7280; font-size: 13px; display: flex; align-items: center; padding: 0 14px; }
+  .layout { display: grid; grid-template-columns: 230px 1fr; min-height: 756px; }
+  .side { background: #111827; color: #d1d5db; padding: 24px 18px; }
+  .side .logo { color: #fff; font-weight: 700; font-size: 18px; margin-bottom: 26px; }
+  .side div.item { padding: 9px 12px; border-radius: 8px; margin-bottom: 4px; }
+  .side div.active { background: #1f2937; color: #fff; }
+  .content { padding: 34px 44px; }
+  h1 { margin: 0 0 4px; font-size: 26px; }
+  .sub { color: #6b7280; margin-bottom: 24px; }
+  .panel { background: #fff; border-radius: 12px; padding: 24px 28px; box-shadow: 0 1px 3px rgba(0,0,0,.06); margin-bottom: 20px; max-width: 760px; }
+  .panel h2 { font-size: 16px; margin: 0 0 16px; }
+  .field { display: grid; grid-template-columns: 170px 1fr; align-items: center; margin-bottom: 14px; }
+  label { color: #4b5563; font-size: 14px; }
+  .input { height: 38px; border: 1px solid #d1d5db; border-radius: 8px; display: flex; align-items: center; padding: 0 12px; font-size: 15px; background: #fff; }
+  .mono { font-family: Consolas, monospace; letter-spacing: .5px; }
+  @media (max-width: 900px) { /* the 800 px GIF scene: room for the toolbar on the right */
+    .layout { grid-template-columns: 170px 1fr; } .side { padding: 22px 12px; } .content { padding: 26px 28px; }
+    .panel { max-width: 500px; padding: 20px 24px; margin-bottom: 14px; } .field { grid-template-columns: 120px 1fr; margin-bottom: 10px; }
+    h1 { font-size: 22px; } .sub { margin-bottom: 16px; } }
+  .save { display: inline-block; background: #2563eb; color: #fff; border-radius: 8px; padding: 9px 18px; font-weight: 600; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><div class="url">cloud.lumen.example/account/security</div></div>
+  <div class="layout">
+    <div class="side">
+      <div class="logo">Lumen Cloud</div>
+      <div class="item">Overview</div><div class="item">Projects</div><div class="item active">Account &amp; security</div><div class="item">Billing</div><div class="item">Support</div>
+    </div>
+    <div class="content">
+      <h1>Account &amp; security</h1>
+      <div class="sub">Manage your sign-in details and payment method.</div>
+      <div class="panel">
+        <h2>Sign-in</h2>
+        <div class="field"><label>Email</label><div class="input">dana.rivers@mail.example</div></div>
+        <div class="field"><label>Password</label><div class="input mono">Summer-Trail-2048!</div></div>
+        <div class="field"><label>API key</label><div class="input mono">lm_live_7f3a9c2e81d44b6f</div></div>
+      </div>
+      <div class="panel">
+        <h2>Payment method</h2>
+        <div class="field"><label>Card number</label><div class="input mono">4111 2222 3333 4444</div></div>
+        <div class="field"><label>Expires</label><div class="input">09 / 29</div></div>
+        <span class="save">Save changes</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

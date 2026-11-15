@@ -5,7 +5,7 @@
 Ľahký nástroj na screenshoty a nahrávanie obrazovky pre Windows. Vznikol ako náhrada za už nepodporovaný **Lightshot 5.5.0.7**. Má rovnaký spôsob práce (PrtScr → výber oblasti → kreslenie → kopírovať/uložiť), ale **bez telemetrie a bez nahrávania na prntscr.com**. Navyše vie nahrávať obrazovku do MP4 alebo GIF.
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="Editor ShotLite: výber so šípkami, obdĺžnikom, začiernením, matným sklom a zvýrazňovačom" width="640">
+  <img src="docs/overview.gif" alt="ShotLite v akcii: výber oblasti, šípka, zvýraznená veta, začiernené meno, poznámka a kopírovanie" width="800">
 </p>
 
 ## Stiahnutie
@@ -17,6 +17,15 @@
 Windows 10/11 x64. .NET je súčasťou balíka. Nahrávanie obrazovky vyžaduje Windows 10 verzie 2004 alebo novší.
 
 Nainštalovaná aplikácia ponúkne novú verziu v menu v lište. Prvým kliknutím ju stiahneš (menu ukazuje priebeh), druhým na Reštartovať a aktualizovať ju nainštaluješ a spustí sa nová verzia. Alebo všetko prebehne automaticky, ak si to zapneš v nastaveniach. Každá aktualizácia sa pred spustením overí digitálnym podpisom. Prenosná verzia namiesto toho otvorí stránku na stiahnutie.
+
+## Ukážky
+
+Súkromné údaje skryješ tromi štýlmi (štýl zvolíš podržaním tlačidla Začierniť) a text pridáš vo veľkosti, akú potrebuješ (podrž T).
+
+<p align="center">
+  <img src="docs/black-out.gif" alt="Začiernenie, matné sklo a pixelizácia skryjú heslo, API kľúč a číslo karty" width="400">
+  <img src="docs/text.gif" alt="Text: podržaním T zvolíš veľkosť, klikneš a píšeš" width="400">
+</p>
 
 ## Ovládanie
 
@@ -57,7 +66,7 @@ Text: klikni nástrojom Text do výberu, píš, potvrď `Enter` (`Shift+Enter` =
 
 ## Pomery strán
 
-Výber sa dá zamknúť na pomer strán, pre screenshoty aj nahrávky. Predvolené sú 9:16, 4:3 a 16:9. Zoznam aj predvolený pomer zmeníš v nastaveniach.
+Výber sa dá zamknúť na pomer strán, pre screenshoty aj nahrávky. Predvolené sú 9:16, 4:3 a 16:9. Zoznam aj predvolený pomer zmeníš v nastaveniach. **Celá obrazovka** v tom istom menu vyberie celý monitor, na ktorom je výber (alebo `Ctrl+A` pre monitor pod kurzorom).
 
 ## Rozpoznávanie textu (OCR)
 

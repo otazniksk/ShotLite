@@ -25,6 +25,7 @@
   "RecordCursor": "Registra il cursore del mouse",
   "ActionAspect": "Proporzioni: {0} (V) · tieni premuto per scegliere",
   "AspectFree": "Libere",
+  "AspectFullSize": "Schermo intero",
   "Copied": "Screenshot copiato negli appunti.",
   "CopyFailed": "Copia negli appunti non riuscita: {0}",
   "TextCopied": "Testo copiato negli appunti.",
