@@ -1116,6 +1116,14 @@ internal sealed class CaptureForm : Form
         Controls.Add(textBox);
         FitTextBox(textBox);
 
+        // The I-beam's hot spot is its middle: the first line is centered on it and starts at it,
+        // not hanging from the top-left corner of the box (border and inner margin included).
+        textBox.Text = "W";
+        var origin = textBox.GetPositionFromCharIndex(0);
+        textBox.Text = "";
+        int border = (textBox.Width - textBox.ClientSize.Width) / 2;
+        textBox.Location = new Point(p.X - border - origin.X, p.Y - border - origin.Y - textBox.Font.Height / 2);
+
         textBox.Focus();
         _textBox = textBox;
     }
