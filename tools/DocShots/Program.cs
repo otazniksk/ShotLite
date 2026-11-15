@@ -349,8 +349,16 @@ internal sealed class Shots
         form.Show();
         Application.DoEvents();
         var tabs = Descendants(form).OfType<TabControl>().Single();
-        string[] names = ["general", "shortcuts", "screenshots", "video", "server"];
-        for (int i = 0; i < tabs.TabCount && i < names.Length; i++)
+        // By title: the Video tab is missing where Windows can't record.
+        var names = new Dictionary<string, string>
+        {
+            [Strings.SectionGeneral] = "general",
+            [Strings.SectionHotkeys] = "shortcuts",
+            [Strings.TabScreenshots] = "screenshots",
+            [Strings.TabVideo] = "video",
+            [Strings.TabServer] = "server",
+        };
+        for (int i = 0; i < tabs.TabCount; i++)
         {
             tabs.SelectedIndex = i;
             Application.DoEvents();
@@ -360,7 +368,7 @@ internal sealed class Shots
             var origin = form.PointToScreen(Point.Empty);
             var client = new Rectangle(origin.X - form.Left, origin.Y - form.Top, form.ClientSize.Width, form.ClientSize.Height);
             using var image = window.Clone(client, PixelFormat.Format24bppRgb);
-            Save(image, $"settings-{names[i]}.png");
+            Save(image, $"settings-{names[tabs.TabPages[i].Text]}.png");
         }
         form.Close();
     }
