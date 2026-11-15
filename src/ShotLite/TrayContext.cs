@@ -27,10 +27,28 @@ internal sealed class TrayContext : ApplicationContext
     private readonly ToolStripMenuItem _aboutItem;
     private readonly ToolStripMenuItem _exitItem;
     private readonly ToolStripMenuItem _updateItem;
+    /// <summary>A real button in the menu once the update is downloaded; it replaces <see cref="_updateItem"/>.</summary>
+    private readonly Button _restartButton = new()
+    {
+        AutoSize = true,
+        UseVisualStyleBackColor = false,
+        BackColor = Color.FromArgb(220, 252, 231), // light green: a system button that still stands out
+        Cursor = Cursors.Hand,
+    };
+    private readonly ToolStripControlHost _restartHost;
     private readonly ToolStripSeparator _updateSeparator = new() { Visible = false };
     private readonly System.Windows.Forms.Timer _updateTimer = new();
     private UpdateInfo? _update;
     private bool _updateDownloading;
+    /// <summary>Downloaded percent while <see cref="_updateDownloading"/>; -1 before the size is known.</summary>
+    private int _updateProgress = -1;
+    private bool _updateFailed;
+    /// <summary>The update item was clicked: the menu stays open to show the progress.</summary>
+    private bool _keepMenuOpen;
+    /// <summary>The user confirmed the restart (or updates install automatically); only then may the setup run.</summary>
+    private bool _updateApproved;
+    private static readonly Color UpdateRed = Color.FromArgb(220, 38, 38);
+    private static readonly Color UpdateGreen = Color.FromArgb(22, 163, 74);
     private string? _updateInstaller;
     private CaptureForm? _overlay;
     private bool _settingsOpen;
@@ -55,14 +73,37 @@ internal sealed class TrayContext : ApplicationContext
         _updateItem = new ToolStripMenuItem(null, null, (_, _) => OnUpdateClicked())
         {
             Visible = false,
-            ForeColor = Color.FromArgb(220, 38, 38),
+            ForeColor = UpdateRed,
         };
         _updateItem.Font = new Font(_updateItem.Font, FontStyle.Bold);
+
+        // Left-aligned with the texts of the other items (the host itself is as wide as the menu).
+        int gap = _restartButton.LogicalToDeviceUnits(4);
+        _restartHost = new ToolStripControlHost(_restartButton)
+        {
+            Visible = false,
+            ControlAlign = ContentAlignment.MiddleLeft,
+            Margin = new Padding(gap, gap, gap, gap),
+        };
+        _restartButton.Click += (_, _) =>
+        {
+            (_restartHost.GetCurrentParent() as ToolStripDropDown)?.Close();
+            ApproveUpdate();
+        };
         ApplyTexts();
 
         var menu = new ContextMenuStrip();
+        // Downloading keeps the menu open to show the progress; the restart click doesn't need it.
+        menu.ItemClicked += (_, e) => _keepMenuOpen = e.ClickedItem == _updateItem && UpdateInstaller.CanInstall && _updateInstaller == null;
+        menu.Closing += (_, e) =>
+        {
+            if (e.CloseReason == ToolStripDropDownCloseReason.ItemClicked && _keepMenuOpen)
+                e.Cancel = true;
+            _keepMenuOpen = false;
+        };
         menu.Items.AddRange(new ToolStripItem[]
         {
+            _restartHost,
             _updateItem,
             _updateSeparator,
             _captureItem,
@@ -121,14 +162,14 @@ internal sealed class TrayContext : ApplicationContext
 
     private async void CheckForUpdates()
     {
-        if (!_settings.CheckForUpdates)
+        // An update being downloaded or waiting for the restart click keeps its version; a newer one comes after the restart.
+        if (!_settings.CheckForUpdates || _updateDownloading || _updateInstaller != null)
             return;
         var update = await UpdateChecker.CheckAsync(); // continues on the UI thread
-        if (update == null || !_settings.CheckForUpdates)
+        if (update == null || !_settings.CheckForUpdates || _updateDownloading || _updateInstaller != null)
             return;
 
         _update = update;
-        _updateItem.Visible = _updateSeparator.Visible = true;
         ApplyTexts();
 
         bool installable = UpdateInstaller.CanInstall;
@@ -146,28 +187,45 @@ internal sealed class TrayContext : ApplicationContext
 
     private async void OnUpdateClicked()
     {
-        if (UpdateInstaller.CanInstall)
+        if (_updateInstaller != null)
+            ApproveUpdate();
+        else if (UpdateInstaller.CanInstall)
             await InstallUpdate(quiet: false);
         else
             OpenUpdatePage();
     }
 
+    private void ApproveUpdate()
+    {
+        _updateApproved = true;
+        ApplyTexts();
+        LaunchUpdateWhenIdle();
+    }
+
     /// <param name="quiet">Automatic update: a failure stays silent and falls back to the normal notification.</param>
-    /// <returns>True when the verified installer is ready.</returns>
+    /// <returns>True when the verified installer is ready. A manual update then waits for the restart click.</returns>
     private async Task<bool> InstallUpdate(bool quiet)
     {
         if (_update == null || _updateDownloading || _updateInstaller != null)
             return true;
 
         _updateDownloading = true;
+        _updateFailed = false;
+        _updateProgress = -1;
         ApplyTexts();
+        // Created on the UI thread, so the reports arrive there and can update the open menu.
+        var progress = new Progress<int>(percent =>
+        {
+            _updateProgress = percent;
+            ApplyTexts();
+        });
         if (!quiet)
             _notifier.Show(Strings.UpdateDownloading, force: true);
 
         string? failure = null;
         try
         {
-            _updateInstaller = await UpdateInstaller.DownloadAsync(_update.Version); // continues on the UI thread
+            _updateInstaller = await UpdateInstaller.DownloadAsync(_update.Version, progress); // continues on the UI thread
         }
         catch (Exception ex) when (ex is InvalidDataException or CryptographicException)
         {
@@ -178,6 +236,8 @@ internal sealed class TrayContext : ApplicationContext
             failure = ex.Message;
         }
         _updateDownloading = false;
+        // A failed automatic update keeps the normal label; it falls back to the notification.
+        _updateFailed = failure != null && !quiet;
         ApplyTexts();
 
         if (failure != null)
@@ -186,14 +246,23 @@ internal sealed class TrayContext : ApplicationContext
                 _notifier.Error(string.Format(Strings.UpdateFailed, failure));
             return false;
         }
-        LaunchUpdateWhenIdle();
+        if (quiet)
+        {
+            ApproveUpdate();
+        }
+        else
+        {
+            ApplyTexts();
+            // For when the menu was closed meanwhile or the download started from the notification.
+            _notifier.Show(string.Format(Strings.UpdateReady, _update.Version.ToString(3)), ApproveUpdate, force: true);
+        }
         return true;
     }
 
     /// <summary>Never interrupts work: with a recording, the overlay, settings, an upload or text recognition it waits until they finish.</summary>
     private void LaunchUpdateWhenIdle()
     {
-        if (_updateInstaller is not { } installer || _update == null
+        if (_updateInstaller is not { } installer || _update == null || !_updateApproved
             || _recording != null || _overlay != null || _settingsOpen || _actions.IsBusy)
             return;
 
@@ -205,12 +274,20 @@ internal sealed class TrayContext : ApplicationContext
         }
         catch (InvalidDataException)
         {
-            _notifier.Error(string.Format(Strings.UpdateFailed, Strings.UpdateBadSignature));
+            ShowUpdateFailed(Strings.UpdateBadSignature);
         }
         catch (Exception ex) when (ex is Win32Exception or IOException or UnauthorizedAccessException)
         {
-            _notifier.Error(string.Format(Strings.UpdateFailed, ex.Message));
+            ShowUpdateFailed(ex.Message);
         }
+    }
+
+    private void ShowUpdateFailed(string reason)
+    {
+        _updateFailed = true;
+        _updateApproved = false;
+        ApplyTexts();
+        _notifier.Error(string.Format(Strings.UpdateFailed, reason));
     }
 
     private void OpenUpdatePage() =>
@@ -230,9 +307,26 @@ internal sealed class TrayContext : ApplicationContext
         if (_update != null)
         {
             var label = UpdateInstaller.CanInstall ? Strings.MenuInstallUpdate : Strings.MenuUpdateAvailable;
-            _updateItem.Text = _updateDownloading ? Strings.UpdateDownloading : string.Format(label, _update.Version.ToString(3));
-            _updateItem.Enabled = !_updateDownloading;
+            _updateItem.Text = true switch
+            {
+                _ when _updateDownloading && _updateProgress >= 0 => string.Format(Strings.UpdateDownloadingProgress, _updateProgress),
+                _ when _updateDownloading => Strings.UpdateDownloading,
+                _ when _updateInstaller != null && _updateApproved => Strings.UpdateInstalling,
+                _ when _updateInstaller != null => string.Format(Strings.MenuUpdateRestart, _update.Version.ToString(3)),
+                _ when _updateFailed => Strings.MenuUpdateRetry,
+                _ => string.Format(label, _update.Version.ToString(3)),
+            };
+            // Red asks for attention; green while the approved update installs.
+            _updateItem.ForeColor = _updateInstaller != null ? UpdateGreen : UpdateRed;
+            _restartButton.Text = string.Format(Strings.MenuUpdateRestart, _update.Version.ToString(3));
         }
+
+        // Derived from the state every time, so turning update checks off and on again restores the items.
+        bool offered = _update != null && _settings.CheckForUpdates;
+        bool ready = offered && _updateInstaller != null && !_updateApproved;
+        _updateSeparator.Available = offered;
+        _restartHost.Available = ready;
+        _updateItem.Available = offered && !ready;
     }
 
     private void OnHotkey(int id)
@@ -352,9 +446,7 @@ internal sealed class TrayContext : ApplicationContext
                 Autostart.Set(_settings.RunAtStartup);
                 Localization.Apply(_settings.Language);
                 ApplyTexts();
-                if (!_settings.CheckForUpdates)
-                    _updateItem.Visible = _updateSeparator.Visible = false;
-                else if (_update == null)
+                if (_settings.CheckForUpdates && _update == null)
                     CheckForUpdates();
             }
         }

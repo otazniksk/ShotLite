@@ -66,6 +66,11 @@ internal static class Strings
     public static string UpdateNotification => Localization.Get(nameof(UpdateNotification));
     public static string UpdateNotificationInstall => Localization.Get(nameof(UpdateNotificationInstall));
     public static string UpdateDownloading => Localization.Get(nameof(UpdateDownloading));
+    public static string UpdateDownloadingProgress => Localization.Get(nameof(UpdateDownloadingProgress));
+    public static string UpdateInstalling => Localization.Get(nameof(UpdateInstalling));
+    public static string MenuUpdateRetry => Localization.Get(nameof(MenuUpdateRetry));
+    public static string MenuUpdateRestart => Localization.Get(nameof(MenuUpdateRestart));
+    public static string UpdateReady => Localization.Get(nameof(UpdateReady));
     public static string UpdateFailed => Localization.Get(nameof(UpdateFailed));
     public static string UpdateBadSignature => Localization.Get(nameof(UpdateBadSignature));
     public static string MenuExit => Localization.Get(nameof(MenuExit));

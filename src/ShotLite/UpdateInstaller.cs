@@ -46,9 +46,10 @@ internal static class UpdateInstaller
         }
     }
 
+    /// <param name="progress">Percent of the installer downloaded, reported only when it changes.</param>
     /// <returns>The path of the verified installer.</returns>
     /// <exception cref="InvalidDataException">The signature doesn't match; the file is already deleted.</exception>
-    public static async Task<string> DownloadAsync(Version version)
+    public static async Task<string> DownloadAsync(Version version, IProgress<int>? progress = null)
     {
         var number = version.ToString(3);
         DeleteDownloads();
@@ -56,8 +57,8 @@ internal static class UpdateInstaller
 
         var installer = Path.Combine(DownloadFolder, InstallerName);
         var signature = Path.Combine(DownloadFolder, SignatureName);
-        await DownloadFileAsync($"{BuildInfo.RepositoryUrl}/releases/download/v{number}/{InstallerName}", installer, MaxInstallerBytes);
-        await DownloadFileAsync($"{BuildInfo.RepositoryUrl}/releases/download/v{number}/{SignatureName}", signature, MaxSignatureBytes);
+        await DownloadFileAsync($"{BuildInfo.RepositoryUrl}/releases/download/v{number}/{InstallerName}", installer, MaxInstallerBytes, progress);
+        await DownloadFileAsync($"{BuildInfo.RepositoryUrl}/releases/download/v{number}/{SignatureName}", signature, MaxSignatureBytes, null);
 
         await using (var file = File.OpenRead(installer))
         {
@@ -122,7 +123,7 @@ internal static class UpdateInstaller
         }
     }
 
-    private static async Task DownloadFileAsync(string url, string path, long maxBytes)
+    private static async Task DownloadFileAsync(string url, string path, long maxBytes, IProgress<int>? progress)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.UserAgent.ParseAdd($"ShotLite/{UpdateChecker.CurrentVersion}");
@@ -136,6 +137,8 @@ internal static class UpdateInstaller
         await using var target = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         var buffer = new byte[81920];
         long total = 0;
+        long? length = response.Content.Headers.ContentLength;
+        int percent = -1;
         for (int read; (read = await source.ReadAsync(buffer, stall.Token)) > 0;)
         {
             total += read;
@@ -143,6 +146,8 @@ internal static class UpdateInstaller
                 throw new InvalidDataException();
             await target.WriteAsync(buffer.AsMemory(0, read));
             stall.CancelAfter(StallTimeout);
+            if (progress != null && length > 0 && (int)(total * 100 / length.Value) is var now && now != percent)
+                progress.Report(percent = Math.Min(now, 100));
         }
     }
 }
