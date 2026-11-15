@@ -39,6 +39,9 @@ internal sealed class SettingsForm : Form
     /// <summary>True while a shortcut box records keys, so the global hotkeys don't swallow them.</summary>
     public event Action<bool>? HotkeyEditingChanged;
 
+    /// <summary>A shortcut box has focus; it keeps it while the user switches to another app.</summary>
+    private bool _hotkeyBoxFocused;
+
     /// <param name="settings">A working copy; it is modified only when the user confirms.</param>
     public SettingsForm(AppSettings settings, Icon icon)
     {
@@ -166,6 +169,22 @@ internal sealed class SettingsForm : Form
         AcceptButton = ok;
         CancelButton = cancel;
         Controls.Add(layout);
+    }
+
+    // Switching to another app doesn't move focus out of the box (no Leave), so the hotkeys
+    // would stay released there; they're released only while this window is active.
+    protected override void OnActivated(EventArgs e)
+    {
+        base.OnActivated(e);
+        if (_hotkeyBoxFocused)
+            HotkeyEditingChanged?.Invoke(true);
+    }
+
+    protected override void OnDeactivate(EventArgs e)
+    {
+        base.OnDeactivate(e);
+        if (_hotkeyBoxFocused)
+            HotkeyEditingChanged?.Invoke(false);
     }
 
     /// <summary>A TabControl doesn't size itself, so it takes the size of the largest page once scaling is done.</summary>
@@ -321,7 +340,11 @@ internal sealed class SettingsForm : Form
         enabled.Checked = setting.Enabled;
         enabled.Anchor = AnchorStyles.Left;
         box.Hotkey = setting.Keys;
-        box.EditingChanged += editing => HotkeyEditingChanged?.Invoke(editing);
+        box.EditingChanged += editing =>
+        {
+            _hotkeyBoxFocused = editing;
+            HotkeyEditingChanged?.Invoke(editing);
+        };
         _grid.Controls.Add(enabled, 0, _row);
         _grid.Controls.Add(box, 1, _row);
         _row++;
