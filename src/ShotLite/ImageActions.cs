@@ -17,7 +17,7 @@ internal sealed class ImageActions
 
     private readonly AppSettings _settings;
     private readonly Notifier _notifier;
-    private int _uploads;
+    private int _busy;
 
     public ImageActions(AppSettings settings, Notifier notifier)
     {
@@ -25,10 +25,11 @@ internal sealed class ImageActions
         _notifier = notifier;
     }
 
-    /// <summary>Raised on the UI thread when an upload has ended, successfully or not.</summary>
-    public event Action? UploadFinished;
+    /// <summary>Raised on the UI thread when an upload or text recognition has ended, successfully or not.</summary>
+    public event Action? WorkFinished;
 
-    public bool IsUploading => _uploads > 0;
+    /// <summary>An upload or text recognition still runs after the overlay closed; an update must wait for it.</summary>
+    public bool IsBusy => _busy > 0;
 
     private bool IsJpeg => _settings.FileFormat == "jpg";
     private string Extension => IsJpeg ? ".jpg" : ".png";
@@ -43,6 +44,44 @@ internal sealed class ImageActions
         catch (ExternalException ex)
         {
             _notifier.Error(string.Format(Strings.CopyFailed, ex.Message));
+        }
+    }
+
+    /// <summary>Recognizes the text in the image and puts it in the clipboard. Takes ownership of the image.</summary>
+    public async Task CopyTextAsync(Bitmap image)
+    {
+        using var _ = image;
+        var engine = TextRecognizer.CreateEngine();
+        if (engine == null)
+        {
+            _notifier.Error(Strings.OcrUnavailable);
+            return;
+        }
+
+        _busy++;
+        try
+        {
+            var text = await TextRecognizer.RecognizeAsync(engine, image);
+            if (text.Length == 0)
+            {
+                _notifier.Show(Strings.NoTextFound, force: true);
+                return;
+            }
+            Clipboard.SetText(text);
+            _notifier.Show(Strings.TextCopied);
+        }
+        catch (ExternalException ex)
+        {
+            _notifier.Error(string.Format(Strings.CopyFailed, ex.Message));
+        }
+        catch (Exception ex)
+        {
+            _notifier.Error(string.Format(Strings.OcrFailed, ex.Message));
+        }
+        finally
+        {
+            _busy--;
+            WorkFinished?.Invoke();
         }
     }
 
@@ -144,7 +183,7 @@ internal sealed class ImageActions
     public async Task UploadAsync(EncodedImage image)
     {
         var upload = _settings.Upload;
-        _uploads++;
+        _busy++;
         try
         {
             using var content = new MultipartFormDataContent();
@@ -174,8 +213,8 @@ internal sealed class ImageActions
         }
         finally
         {
-            _uploads--;
-            UploadFinished?.Invoke();
+            _busy--;
+            WorkFinished?.Invoke();
         }
     }
 

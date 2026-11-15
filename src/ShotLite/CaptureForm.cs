@@ -6,7 +6,7 @@ namespace ShotLite;
 
 internal enum Tool { None, Pencil, Line, Arrow, Rectangle, Redact, Marker, Text }
 
-internal enum ToolbarAction { Pencil, Line, Arrow, Rectangle, Redact, Marker, Text, Color, Undo, Aspect, Record, Upload, Print, Copy, Save, Close }
+internal enum ToolbarAction { Pencil, Line, Arrow, Rectangle, Redact, Marker, Text, Color, Undo, Aspect, Record, Upload, Print, Ocr, Copy, Save, Close }
 
 internal sealed class ToolbarButton
 {
@@ -30,6 +30,8 @@ internal sealed class ToolbarButton
 internal sealed class CaptureForm : Form
 {
     private const int NoHandle = -1;
+    private const float MinTextSize = 8, MaxTextSize = 96;
+    private static readonly int[] TextSizes = { 10, 12, 14, 16, 20, 24, 32, 48, 64 };
     private static readonly Color Accent = Color.FromArgb(0, 120, 215);
 
     /// <summary>Outside: mouse pressed outside the selection; a click copies, a drag starts a new selection.</summary>
@@ -52,12 +54,13 @@ internal sealed class CaptureForm : Form
     private Tool _tool = Tool.None;
     private Color _color;
     private float _penWidth;
+    private float _textSize;
     private TextBox? _textBox;
     private ToolbarButton? _hover;
     private Rectangle _verticalBar, _horizontalBar;
     private Rectangle _lastVisual;
     private Rectangle? _hintBounds;
-    private Font? _uiFont, _iconFont, _iconTextFont, _aspectFont;
+    private Font? _uiFont, _iconFont, _iconTextFont, _aspectFont, _ocrFont;
     private RedactStyle _redactStyle;
     private readonly System.Windows.Forms.Timer _holdTimer = new() { Interval = 350 };
     private ToolbarAction? _pressed;
@@ -82,6 +85,7 @@ internal sealed class CaptureForm : Form
         _screenBounds = bounds;
         _color = Color.FromArgb(settings.ColorArgb);
         _penWidth = Math.Clamp(settings.PenWidth, 1, 40);
+        _textSize = Math.Clamp(settings.TextSize, MinTextSize, MaxTextSize);
         _redactStyle = Enum.IsDefined(settings.RedactStyle) ? settings.RedactStyle : RedactStyle.Black;
         _holdTimer.Tick += (_, _) => OnButtonHold();
 
@@ -122,6 +126,7 @@ internal sealed class CaptureForm : Form
             if (settings.Upload.IsConfigured)
                 AddButton(ToolbarAction.Upload, Strings.ActionUpload, vertical: false);
             AddButton(ToolbarAction.Print, Strings.ActionPrint, vertical: false);
+            AddButton(ToolbarAction.Ocr, Strings.ActionOcr, vertical: false);
             AddButton(ToolbarAction.Copy, Strings.ActionCopy, vertical: false);
             AddButton(ToolbarAction.Save, Strings.ActionSave, vertical: false);
         }
@@ -130,13 +135,14 @@ internal sealed class CaptureForm : Form
 
     private bool HasSelection => _selection.Width >= 3 && _selection.Height >= 3;
     private bool ToolbarsVisible => HasSelection && _drag is DragMode.None or DragMode.Drawing;
-    private float TextPixelSize => S(14) + _penWidth * 2;
+    private float TextPixelSize => _textSize * DeviceDpi / 96f;
     private string HintText => _recordMode ? Strings.RecordHint : Strings.Hint;
 
     private Font UiFont => _uiFont ??= new Font("Segoe UI", S(12), FontStyle.Regular, GraphicsUnit.Pixel);
     private Font IconFont => _iconFont ??= new Font("Segoe MDL2 Assets", S(16), FontStyle.Regular, GraphicsUnit.Pixel);
     private Font IconTextFont => _iconTextFont ??= new Font("Segoe UI", S(17), FontStyle.Bold, GraphicsUnit.Pixel);
     private Font AspectFont => _aspectFont ??= new Font("Segoe UI", S(10), FontStyle.Bold, GraphicsUnit.Pixel);
+    private Font OcrFont => _ocrFont ??= new Font("Segoe UI", S(9), FontStyle.Bold, GraphicsUnit.Pixel);
 
     private int S(int value) => (int)Math.Round(value * DeviceDpi / 96.0);
 
@@ -202,6 +208,7 @@ internal sealed class CaptureForm : Form
             _iconFont?.Dispose();
             _iconTextFont?.Dispose();
             _aspectFont?.Dispose();
+            _ocrFont?.Dispose();
             foreach (var annotation in _annotations.OfType<IDisposable>())
                 annotation.Dispose();
         }
@@ -385,6 +392,7 @@ internal sealed class CaptureForm : Form
             case ToolbarAction.Text:
                 TextRenderer.DrawText(g, "T", IconTextFont, bounds, foreground,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                DrawHoldCorner(g, bounds, foreground);
                 break;
             case ToolbarAction.Color:
                 using (var swatch = new SolidBrush(_color))
@@ -395,6 +403,7 @@ internal sealed class CaptureForm : Form
             case ToolbarAction.Undo: Glyph(g, "", bounds, _annotations.Count > 0 ? foreground : Color.Silver); break;
             case ToolbarAction.Upload: Glyph(g, "", bounds, foreground); break;
             case ToolbarAction.Print: Glyph(g, "", bounds, foreground); break;
+            case ToolbarAction.Ocr: DrawOcrGlyph(g, bounds, foreground); break;
             case ToolbarAction.Copy: Glyph(g, "", bounds, foreground); break;
             case ToolbarAction.Save: Glyph(g, "", bounds, foreground); break;
             case ToolbarAction.Close: Glyph(g, "", bounds, foreground); break;
@@ -480,6 +489,21 @@ internal sealed class CaptureForm : Form
         }
     }
 
+    /// <summary>"OCR" inside scanner corners.</summary>
+    private void DrawOcrGlyph(Graphics g, Rectangle bounds, Color color)
+    {
+        TextRenderer.DrawText(g, "OCR", OcrFont, bounds, color,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+
+        var frame = Rectangle.Inflate(bounds, -S(2), -S(7));
+        int l = S(4);
+        using var pen = new Pen(color, Math.Max(1.5f, S(1) * 1.5f)) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        g.DrawLines(pen, new Point[] { new(frame.Left, frame.Top + l), new(frame.Left, frame.Top), new(frame.Left + l, frame.Top) });
+        g.DrawLines(pen, new Point[] { new(frame.Right - l, frame.Top), new(frame.Right, frame.Top), new(frame.Right, frame.Top + l) });
+        g.DrawLines(pen, new Point[] { new(frame.Left, frame.Bottom - l), new(frame.Left, frame.Bottom), new(frame.Left + l, frame.Bottom) });
+        g.DrawLines(pen, new Point[] { new(frame.Right - l, frame.Bottom), new(frame.Right, frame.Bottom), new(frame.Right, frame.Bottom - l) });
+    }
+
     private void Glyph(Graphics g, string glyph, Rectangle bounds, Color color) =>
         TextRenderer.DrawText(g, glyph, IconFont, bounds, color,
             TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
@@ -530,7 +554,12 @@ internal sealed class CaptureForm : Form
         var text = $"{_selection.Width} × {_selection.Height}";
         if (_aspect is { } aspect)
             text += $"   ·   {aspect}";
-        return _tool == Tool.None ? text : $"{text}   ·   {_penWidth:0} px";
+        return _tool switch
+        {
+            Tool.None => text,
+            Tool.Text => $"{text}   ·   {_textSize:0} px",
+            _ => $"{text}   ·   {_penWidth:0} px",
+        };
     }
 
     private Rectangle SizeLabelBounds()
@@ -669,7 +698,7 @@ internal sealed class CaptureForm : Form
     {
         base.OnMouseDown(e);
 
-        if (e.Button == MouseButtons.Right && HitButton(e.Location) is { Action: ToolbarAction.Redact or ToolbarAction.Aspect or ToolbarAction.Record } menuButton)
+        if (e.Button == MouseButtons.Right && HitButton(e.Location) is { Action: ToolbarAction.Redact or ToolbarAction.Text or ToolbarAction.Aspect or ToolbarAction.Record } menuButton)
         {
             ShowButtonMenu(menuButton);
             return;
@@ -707,7 +736,7 @@ internal sealed class CaptureForm : Form
 
         if (HitButton(p) is { } button)
         {
-            if (button.Action is ToolbarAction.Redact or ToolbarAction.Aspect or ToolbarAction.Record)
+            if (button.Action is ToolbarAction.Redact or ToolbarAction.Text or ToolbarAction.Aspect or ToolbarAction.Record)
             {
                 // Click acts on release; holding opens the button's menu instead.
                 _pressed = button.Action;
@@ -813,6 +842,7 @@ internal sealed class CaptureForm : Form
             {
                 case ToolbarAction.Record: RecordSelection(); break;
                 case ToolbarAction.Aspect: ToggleAspect(); break;
+                case ToolbarAction.Text: SelectTool(Tool.Text); break;
                 default: SelectTool(Tool.Redact); break;
             }
             return;
@@ -857,8 +887,17 @@ internal sealed class CaptureForm : Form
         base.OnMouseWheel(e);
         if (_textBox != null)
             return;
-        _penWidth = Math.Clamp(_penWidth + (e.Delta > 0 ? 1 : -1), 1, 40);
-        _settings.PenWidth = _penWidth;
+        int step = e.Delta > 0 ? 1 : -1;
+        if (_tool == Tool.Text)
+        {
+            _textSize = Math.Clamp(_textSize + step * 2, MinTextSize, MaxTextSize);
+            _settings.TextSize = _textSize;
+        }
+        else
+        {
+            _penWidth = Math.Clamp(_penWidth + step, 1, 40);
+            _settings.PenWidth = _penWidth;
+        }
         RefreshVisual();
     }
 
@@ -1076,6 +1115,15 @@ internal sealed class CaptureForm : Form
 
         Controls.Add(textBox);
         FitTextBox(textBox);
+
+        // The I-beam's hot spot is its middle: the first line is centered on it and starts at it,
+        // not hanging from the top-left corner of the box (border and inner margin included).
+        textBox.Text = "W";
+        var origin = textBox.GetPositionFromCharIndex(0);
+        textBox.Text = "";
+        int border = (textBox.Width - textBox.ClientSize.Width) / 2;
+        textBox.Location = new Point(p.X - border - origin.X, p.Y - border - origin.Y - textBox.Font.Height / 2);
+
         textBox.Focus();
         _textBox = textBox;
     }
@@ -1154,6 +1202,7 @@ internal sealed class CaptureForm : Form
             case ToolbarAction.Undo: Undo(); break;
             case ToolbarAction.Upload: UploadAndClose(); break;
             case ToolbarAction.Print: PrintAndClose(); break;
+            case ToolbarAction.Ocr: CopyTextAndClose(); break;
             case ToolbarAction.Copy: CopyAndClose(); break;
             case ToolbarAction.Save: SaveAndClose(); break;
             case ToolbarAction.Close: Close(); break;
@@ -1204,8 +1253,42 @@ internal sealed class CaptureForm : Form
         {
             case ToolbarAction.Record: ShowRecordMenu(button); break;
             case ToolbarAction.Aspect: ShowAspectMenu(button); break;
+            case ToolbarAction.Text: ShowTextSizeMenu(button); break;
             default: ShowRedactMenu(button); break;
         }
+    }
+
+    private void ShowTextSizeMenu(ToolbarButton button)
+    {
+        Capture = false;
+        var menu = new ContextMenuStrip { ShowImageMargin = false, ShowCheckMargin = true };
+        foreach (var size in TextSizes)
+        {
+            var item = new ToolStripMenuItem($"{size} px") { Checked = Math.Abs(size - _textSize) < 0.5f };
+            item.Click += (_, _) => SetTextSize(size);
+            menu.Items.Add(item);
+        }
+        menu.Closed += (_, _) => BeginInvoke(new Action(menu.Dispose));
+        ShowSideMenu(menu, button);
+    }
+
+    private void SetTextSize(float size)
+    {
+        _textSize = size;
+        _settings.TextSize = size;
+        if (_tool != Tool.Text)
+            SelectTool(Tool.Text);
+        else
+            RefreshVisual();
+    }
+
+    /// <summary>Opens a menu beside the button of the tool bar, on the side with room.</summary>
+    private void ShowSideMenu(ContextMenuStrip menu, ToolbarButton button)
+    {
+        var b = button.Bounds;
+        bool roomOnLeft = b.Left - _verticalBar.Width > 0;
+        menu.Show(this, roomOnLeft ? new Point(_verticalBar.Left, b.Top) : new Point(_verticalBar.Right, b.Top),
+            roomOnLeft ? ToolStripDropDownDirection.BelowLeft : ToolStripDropDownDirection.BelowRight);
     }
 
     private void ShowRedactMenu(ToolbarButton button)
@@ -1237,10 +1320,7 @@ internal sealed class CaptureForm : Form
                 item.Image?.Dispose();
             menu.Dispose();
         }));
-        var b = button.Bounds;
-        bool roomOnLeft = b.Left - _verticalBar.Width > 0;
-        menu.Show(this, roomOnLeft ? new Point(_verticalBar.Left, b.Top) : new Point(_verticalBar.Right, b.Top),
-            roomOnLeft ? ToolStripDropDownDirection.BelowLeft : ToolStripDropDownDirection.BelowRight);
+        ShowSideMenu(menu, button);
     }
 
     private static Bitmap CreateRedactImage(RedactStyle style, int size)
@@ -1381,6 +1461,15 @@ internal sealed class CaptureForm : Form
         Close();
     }
 
+    private void CopyTextAndClose()
+    {
+        if (!HasSelection)
+            return;
+        var image = RenderResult();
+        Close();
+        _ = _actions.CopyTextAsync(image);
+    }
+
     private void SaveAndClose()
     {
         if (!HasSelection)
@@ -1450,6 +1539,7 @@ internal sealed class CaptureForm : Form
             case Keys.V: ToggleAspect(); break;
             case Keys.Enter:
             case Keys.Control | Keys.C: CopyAndClose(); break;
+            case Keys.Control | Keys.Shift | Keys.C: CopyTextAndClose(); break;
             case Keys.Control | Keys.S: SaveAndClose(); break;
             case Keys.Control | Keys.P: PrintAndClose(); break;
             case Keys.Control | Keys.U: UploadAndClose(); break;

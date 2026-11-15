@@ -31,10 +31,12 @@ The installed app offers new versions in the tray menu and installs them with on
 | Move / resize the selection | drag inside the selection / drag the handles |
 | Tools | `P` pencil, `L` line, `A` arrow, `R` rectangle, `B` black out, `M` highlighter, `T` text |
 | Black-out style (black / frosted glass / pixelate) | hold or right-click the Black out icon; the choice is remembered |
-| Line width / text size | mouse wheel |
+| Line width / text size | mouse wheel (with the Text tool it changes the text size) |
+| Text size | hold or right-click the Text icon (10–64 px); the choice is remembered |
 | Straight line at 45° / square | hold `Shift` while drawing |
 | Undo | `Ctrl+Z` |
 | Copy | `Ctrl+C`, `Enter`, or click outside the selection |
+| Copy the text in the selection (OCR) | `Ctrl+Shift+C`, or the OCR button |
 | New selection | drag outside the selection (while nothing is drawn) |
 | Save | `Ctrl+S` |
 | Print | `Ctrl+P` |
@@ -54,6 +56,14 @@ Text: click inside the selection with the Text tool, type, confirm with `Enter` 
 ## Aspect ratios
 
 A selection can be locked to an aspect ratio, for screenshots and recordings alike. The presets are 9:16, 4:3 and 16:9. You can change the list and pick a default in the settings.
+
+## Text recognition (OCR)
+
+The OCR button copies the text in the selection to the clipboard as plain text, one line per row. It uses the recognition built into Windows, so it works offline and nothing leaves your PC.
+
+- It reads the languages installed in Windows (Settings → Time & language → Language & region). Without any, ShotLite tells you what to add.
+- Works best on ordinary printed text: web pages, documents, error messages. Decorative fonts and logos are not recognized, and tables come out line by line.
+- Black-outs are applied first, so hidden text is never copied.
 
 ## Languages
 

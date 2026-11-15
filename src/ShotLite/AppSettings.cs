@@ -116,6 +116,9 @@ public sealed class AppSettings
     public int ColorArgb { get; set; } = Color.FromArgb(255, 229, 57, 53).ToArgb();
     public float PenWidth { get; set; } = 3;
 
+    /// <summary>Font size of the text tool in pixels at 100 % scaling, independent of the pen width.</summary>
+    public float TextSize { get; set; } = 20;
+
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public RedactStyle RedactStyle { get; set; } = RedactStyle.Black;
 
@@ -199,12 +202,20 @@ public sealed class AppSettings
     public AppSettings Clone() =>
         JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(this, JsonOptions), JsonOptions)!;
 
-    public void CopyFrom(AppSettings other)
+    /// <summary>
+    /// Takes over only the values that differ between <paramref name="before"/> and <paramref name="after"/>,
+    /// so what changed elsewhere in the meantime (e.g. the pen color in a capture taken while the settings
+    /// were open) survives.
+    /// </summary>
+    public void CopyChanges(AppSettings before, AppSettings after)
     {
         foreach (var property in typeof(AppSettings).GetProperties())
         {
-            if (property.CanRead && property.CanWrite)
-                property.SetValue(this, property.GetValue(other));
+            if (!property.CanRead || !property.CanWrite)
+                continue;
+            var value = property.GetValue(after);
+            if (JsonSerializer.Serialize(property.GetValue(before), JsonOptions) != JsonSerializer.Serialize(value, JsonOptions))
+                property.SetValue(this, value);
         }
     }
 }

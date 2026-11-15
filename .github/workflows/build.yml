@@ -1,4 +1,5 @@
-# Tag vX.Y.Z: build the installer and the portable zip and publish them as a GitHub Release.
+# Tag vX.Y.Z: build the installer and the portable zip and publish them as a GitHub Release,
+# with the version's section of CHANGELOG.md as release notes (add it before tagging).
 #   git tag v1.0.0 && git push origin v1.0.0
 # Pull request / manual run (Actions -> Run workflow): the same build as workflow artifacts, no release.
 # Plain pushes to main don't build.
@@ -102,6 +103,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # The notes are the version's section of CHANGELOG.md; GitHub appends its generated list below.
+          $version = '${{ steps.version.outputs.number }}'
+          $section = [regex]::Match((Get-Content CHANGELOG.md -Raw), "(?ms)^## $([regex]::Escape($version))[ \t]*\r?\n(.*?)(?=^## |\z)")
+          if (-not $section.Success -or -not $section.Groups[1].Value.Trim()) { throw "CHANGELOG.md has no section '## $version'" }
+          Set-Content out/notes.md $section.Groups[1].Value.Trim() -Encoding utf8
           $files = @('out/ShotLite-install.exe', 'out/ShotLite-portable.zip')
           if (Test-Path out/ShotLite-install.exe.sig) { $files += 'out/ShotLite-install.exe.sig' }
-          gh release create "$env:GITHUB_REF_NAME" @files --title "ShotLite ${{ steps.version.outputs.number }}" --generate-notes --verify-tag
+          gh release create "$env:GITHUB_REF_NAME" @files --title "ShotLite $version" --notes-file out/notes.md --generate-notes --verify-tag

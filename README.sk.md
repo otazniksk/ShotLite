@@ -31,10 +31,12 @@ Nainštalovaná aplikácia ponúkne novú verziu v menu v lište a nainštaluje 
 | Posun / zmena veľkosti výberu | ťahanie vnútri výberu / za úchyty |
 | Nástroje | `P` ceruzka, `L` čiara, `A` šípka, `R` obdĺžnik, `B` začierniť, `M` zvýrazňovač, `T` text |
 | Štýl začiernenia (čierna / matné sklo / pixelizácia) | podržať alebo pravý klik na ikonu Začierniť; voľba sa pamätá |
-| Hrúbka čiary / veľkosť textu | koliesko myši |
+| Hrúbka čiary / veľkosť textu | koliesko myši (pri nástroji Text mení veľkosť písma) |
+| Veľkosť textu | podržať alebo pravý klik na ikonu Text (10–64 px); voľba sa pamätá |
 | Rovná čiara pod 45° / štvorec | držať `Shift` pri kreslení |
 | Späť | `Ctrl+Z` |
 | Kopírovať | `Ctrl+C`, `Enter` alebo klik mimo výberu |
+| Kopírovať text z výberu (OCR) | `Ctrl+Shift+C` alebo tlačidlo OCR |
 | Nový výber | ťahanie mimo výberu (kým nie je nič nakreslené) |
 | Uložiť | `Ctrl+S` |
 | Tlačiť | `Ctrl+P` |
@@ -54,6 +56,14 @@ Text: klikni nástrojom Text do výberu, píš, potvrď `Enter` (`Shift+Enter` =
 ## Pomery strán
 
 Výber sa dá zamknúť na pomer strán, pre screenshoty aj nahrávky. Predvolené sú 9:16, 4:3 a 16:9. Zoznam aj predvolený pomer zmeníš v nastaveniach.
+
+## Rozpoznávanie textu (OCR)
+
+Tlačidlo OCR skopíruje text z výberu do schránky ako obyčajný text, riadok po riadku. Používa rozpoznávanie zabudované vo Windows, takže funguje offline a nič neopúšťa tvoj počítač.
+
+- Číta jazyky nainštalované vo Windows (Nastavenia → Čas a jazyk → Jazyk a oblasť). Ak žiadny nie je, ShotLite povie, čo treba pridať.
+- Najlepšie funguje na bežný tlačený text: weby, dokumenty, chybové hlásenia. Ozdobné písma a logá nerozpozná a tabuľky vyjdú po riadkoch.
+- Začiernenie sa uplatní ešte pred rozpoznaním, takže skrytý text sa nikdy neskopíruje.
 
 ## Jazyky
 

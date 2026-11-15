@@ -92,7 +92,7 @@ internal sealed class TrayContext : ApplicationContext
 
         _notifier = new Notifier(_tray, () => _settings.ShowNotifications);
         _actions = new ImageActions(_settings, _notifier);
-        _actions.UploadFinished += LaunchUpdateWhenIdle;
+        _actions.WorkFinished += LaunchUpdateWhenIdle;
         _hotkeys.Pressed += OnHotkey;
 
         // Follow the registry (the installer may have enabled autostart) and refresh the path in case the exe moved.
@@ -190,11 +190,11 @@ internal sealed class TrayContext : ApplicationContext
         return true;
     }
 
-    /// <summary>Never interrupts work: with a recording, the overlay or settings open it waits until they're closed.</summary>
+    /// <summary>Never interrupts work: with a recording, the overlay, settings, an upload or text recognition it waits until they finish.</summary>
     private void LaunchUpdateWhenIdle()
     {
         if (_updateInstaller is not { } installer || _update == null
-            || _recording != null || _overlay != null || _settingsOpen || _actions.IsUploading)
+            || _recording != null || _overlay != null || _settingsOpen || _actions.IsBusy)
             return;
 
         _updateInstaller = null;
@@ -237,8 +237,6 @@ internal sealed class TrayContext : ApplicationContext
 
     private void OnHotkey(int id)
     {
-        if (_settingsOpen)
-            return;
         if (id == RecordHotkeyId)
         {
             ToggleRecording();
@@ -332,16 +330,24 @@ internal sealed class TrayContext : ApplicationContext
         if (_settingsOpen)
             return;
         _settingsOpen = true;
-        // Release the hotkeys so the user can record the same combinations again.
-        _hotkeys.UnregisterAll();
         try
         {
+            var before = _settings.Clone();
             var working = _settings.Clone();
             using var windowIcon = AppIcon.Load(SystemInformation.IconSize);
             using var form = new SettingsForm(working, windowIcon);
+            // Only while a shortcut box records keys: the user can enter the same combinations again,
+            // and the rest of the time the hotkeys work, e.g. to take a screenshot of the settings.
+            form.HotkeyEditingChanged += editing =>
+            {
+                if (editing)
+                    _hotkeys.UnregisterAll();
+                else
+                    RegisterHotkeys(quiet: true);
+            };
             if (form.ShowDialog() == DialogResult.OK)
             {
-                _settings.CopyFrom(working);
+                _settings.CopyChanges(before, working);
                 _settings.Save();
                 Autostart.Set(_settings.RunAtStartup);
                 Localization.Apply(_settings.Language);
@@ -380,7 +386,8 @@ internal sealed class TrayContext : ApplicationContext
     }
 
     /// <returns>True when every enabled hotkey was registered.</returns>
-    private bool RegisterHotkeys()
+    /// <param name="quiet">No warnings; for re-registering after a shortcut box, which would repeat them on every focus change.</param>
+    private bool RegisterHotkeys(bool quiet = false)
     {
         _hotkeys.UnregisterAll();
         var failed = new List<string>();
@@ -401,14 +408,16 @@ internal sealed class TrayContext : ApplicationContext
 
         if (failed.Count > 0)
         {
-            _notifier.Error(string.Format(Strings.HotkeyFailed, string.Join(", ", failed)));
+            if (!quiet)
+                _notifier.Error(string.Format(Strings.HotkeyFailed, string.Join(", ", failed)));
             return false;
         }
 
         bool usesPrintScreen = (_settings.HotkeyCapture.Keys & Keys.KeyCode) == Keys.PrintScreen;
         if (usesPrintScreen && Autostart.PrintScreenOpensSnippingTool())
         {
-            _notifier.Error(Strings.SnippingWarning);
+            if (!quiet)
+                _notifier.Error(Strings.SnippingWarning);
             return false;
         }
         return true;
