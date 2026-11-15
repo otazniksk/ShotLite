@@ -2,6 +2,11 @@
 
 What's new in each version. The release page on GitHub shows the section of its version. Earlier versions: [Releases](https://github.com/otazniksk/ShotLite/releases).
 
+## 1.2.1
+
+### Fixed
+- Installing an update from the tray menu no longer closes the menu without feedback: it shows the download progress, then **Restart and update** installs it when you click it. If it fails, one click tries again.
+
 ## 1.2.0
 
 ### New

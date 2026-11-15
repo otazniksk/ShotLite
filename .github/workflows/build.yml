@@ -1,14 +1,13 @@
 # Tag vX.Y.Z: build the installer and the portable zip and publish them as a GitHub Release,
 # with the version's section of CHANGELOG.md as release notes (add it before tagging).
 #   git tag v1.0.0 && git push origin v1.0.0
-# Pull request / manual run (Actions -> Run workflow): the same build as workflow artifacts, no release.
-# Plain pushes to main don't build.
+# Manual run (Actions -> Run workflow): the same build as workflow artifacts, no release.
+# Nothing else builds: pushes and pull requests are tested locally before a release.
 name: Build
 
 on:
   push:
     tags: ["v*.*.*"]
-  pull_request:
   workflow_dispatch:
 
 permissions:

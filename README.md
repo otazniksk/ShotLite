@@ -16,7 +16,7 @@ A lightweight tool for screenshots and screen recording on Windows. It was creat
 
 Windows 10/11 x64. The .NET runtime is included. Screen recording needs Windows 10 version 2004 or newer.
 
-The installed app offers new versions in the tray menu and installs them with one click, or automatically if you turn that on in the settings. Every update is checked against a digital signature before it runs. The portable version links to the download instead.
+The installed app offers new versions in the tray menu. One click downloads the update (the menu shows the progress), a second click on Restart and update installs it and starts the new version. Or it all happens automatically if you turn that on in the settings. Every update is checked against a digital signature before it runs. The portable version links to the download instead.
 
 ## Controls
 
