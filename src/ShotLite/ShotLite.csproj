@@ -50,6 +50,7 @@
   <!--
     Version from git (shown in the About dialog):
       HEAD on a tag v1.2.3      -> Version 1.2.3, InformationalVersion "1.2.3"
+                                   (only with a clean tree; local changes on a tag are a branch build)
       HEAD on a branch          -> InformationalVersion "<Version>-<branch>+<sha>[-dirty]"
       no git / not a repository -> the <Version> above
     "git -C" because cmd.exe cannot use a \\wsl.localhost working directory; safe.directory because
@@ -79,14 +80,14 @@
     </Exec>
 
     <PropertyGroup>
-      <_TagVersion Condition="'$(_GitTagExit)' == '0'">$([System.Text.RegularExpressions.Regex]::Match('$(_GitTag)', '^v?(\d+\.\d+\.\d+)$').Groups[1].Value)</_TagVersion>
+      <_TagVersion Condition="'$(_GitTagExit)' == '0' And '$(_GitStatus)' == ''">$([System.Text.RegularExpressions.Regex]::Match('$(_GitTag)', '^v?(\d+\.\d+\.\d+)$').Groups[1].Value)</_TagVersion>
       <_GitDirty Condition="'$(_GitStatus)' != ''">-dirty</_GitDirty>
       <!-- Branch names may contain "/" (feature/x); SemVer allows only [0-9A-Za-z-.]. -->
       <_BranchLabel>$([System.Text.RegularExpressions.Regex]::Replace('$(_GitBranch)', '[^0-9A-Za-z.-]', '-'))</_BranchLabel>
     </PropertyGroup>
     <PropertyGroup Condition="'$(_TagVersion)' != ''">
       <Version>$(_TagVersion)</Version>
-      <InformationalVersion>$(_TagVersion)$(_GitDirty)</InformationalVersion>
+      <InformationalVersion>$(_TagVersion)</InformationalVersion>
     </PropertyGroup>
     <PropertyGroup Condition="'$(_TagVersion)' == '' And '$(_GitBranchExit)' == '0'">
       <InformationalVersion>$(Version)-$(_BranchLabel)+$(_GitSha)$(_GitDirty)</InformationalVersion>
