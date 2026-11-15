@@ -25,6 +25,7 @@
   "RecordCursor": "Egérmutató rögzítése",
   "ActionAspect": "Képarány: {0} (V) · tartsd lenyomva a választáshoz",
   "AspectFree": "Szabad",
+  "AspectFullSize": "Teljes képernyő",
   "Copied": "A képernyőkép a vágólapra került.",
   "CopyFailed": "A vágólapra másolás nem sikerült: {0}",
   "TextCopied": "A szöveg a vágólapra került.",

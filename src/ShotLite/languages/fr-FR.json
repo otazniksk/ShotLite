@@ -25,6 +25,7 @@
   "RecordCursor": "Enregistrer le curseur de la souris",
   "ActionAspect": "Format : {0} (V) · maintenir pour choisir",
   "AspectFree": "Libre",
+  "AspectFullSize": "Plein écran",
   "Copied": "Capture copiée dans le presse-papiers.",
   "CopyFailed": "La copie dans le presse-papiers a échoué : {0}",
   "TextCopied": "Texte copié dans le presse-papiers.",

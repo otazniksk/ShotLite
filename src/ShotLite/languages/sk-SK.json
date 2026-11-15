@@ -25,6 +25,7 @@
   "RecordCursor": "Nahrávať kurzor myši",
   "ActionAspect": "Pomer strán: {0} (V) · podrž pre výber",
   "AspectFree": "Voľný",
+  "AspectFullSize": "Celá obrazovka",
   "Copied": "Screenshot skopírovaný do schránky.",
   "CopyFailed": "Kopírovanie do schránky zlyhalo: {0}",
   "TextCopied": "Text skopírovaný do schránky.",

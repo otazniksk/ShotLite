@@ -25,6 +25,7 @@
   "RecordCursor": "Mauszeiger aufnehmen",
   "ActionAspect": "Seitenverhältnis: {0} (V) · gedrückt halten zur Auswahl",
   "AspectFree": "Frei",
+  "AspectFullSize": "Vollbild",
   "Copied": "Screenshot in die Zwischenablage kopiert.",
   "CopyFailed": "Kopieren in die Zwischenablage fehlgeschlagen: {0}",
   "TextCopied": "Text in die Zwischenablage kopiert.",

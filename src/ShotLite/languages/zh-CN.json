@@ -25,6 +25,7 @@
   "RecordCursor": "录制鼠标指针",
   "ActionAspect": "宽高比：{0} (V) · 按住可选择",
   "AspectFree": "自由",
+  "AspectFullSize": "全屏",
   "Copied": "截图已复制到剪贴板。",
   "CopyFailed": "复制到剪贴板失败：{0}",
   "TextCopied": "文本已复制到剪贴板。",

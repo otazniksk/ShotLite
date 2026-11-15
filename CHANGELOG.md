@@ -4,6 +4,9 @@ What's new in each version. The release page on GitHub shows the section of its 
 
 ## 1.2.3
 
+### Added
+- Full size in the aspect ratio menu: selects the whole monitor the selection is on, not all monitors.
+
 ### Fixed
 - GIF recordings keep the colors of small details that appear later, such as a red arrow or a colored button; before, they could turn into a nearby color (red came out orange). File size stays the same.
 - Text in copied and saved screenshots no longer has a dark fringe around the letters.

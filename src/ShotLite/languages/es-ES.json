@@ -25,6 +25,7 @@
   "RecordCursor": "Grabar el cursor del ratón",
   "ActionAspect": "Relación de aspecto: {0} (V) · mantén pulsado para elegir",
   "AspectFree": "Libre",
+  "AspectFullSize": "Pantalla completa",
   "Copied": "Captura copiada al portapapeles.",
   "CopyFailed": "No se pudo copiar al portapapeles: {0}",
   "TextCopied": "Texto copiado al portapapeles.",

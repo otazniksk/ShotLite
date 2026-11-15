@@ -25,6 +25,7 @@
   "RecordCursor": "Nagrywaj kursor myszy",
   "ActionAspect": "Proporcje: {0} (V) · przytrzymaj, aby wybrać",
   "AspectFree": "Dowolne",
+  "AspectFullSize": "Pełny ekran",
   "Copied": "Zrzut ekranu skopiowano do schowka.",
   "CopyFailed": "Kopiowanie do schowka nie powiodło się: {0}",
   "TextCopied": "Tekst skopiowany do schowka.",

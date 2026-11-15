@@ -542,7 +542,7 @@ internal sealed class CaptureForm : Form
         var buttons = new List<(Rectangle, Rectangle)>();
         foreach (var screen in Screen.AllScreens)
         {
-            var monitor = Rectangle.Intersect(RectangleToClient(Screen.FromPoint(MousePosition).Bounds), ClientRectangle);
+            var monitor = Rectangle.Intersect(RectangleToClient(screen.Bounds), ClientRectangle);
             var location = new Point(monitor.Left + (monitor.Width - size.Width) / 2, monitor.Top + monitor.Height / 2 + S(36));
             buttons.Add((monitor, new Rectangle(location, size)));
         }
@@ -1381,6 +1381,25 @@ internal sealed class CaptureForm : Form
             item.Click += (_, _) => SetAspect(aspect);
             menu.Items.Add(item);
         }
+        menu.Items.Add(new ToolStripSeparator());
+        // The monitor the selection is on (the cursor is at the menu, which may reach onto the next monitor).
+        var fullSize = new ToolStripMenuItem(Strings.AspectFullSize)
+        {
+            ShortcutKeyDisplayString = "Ctrl+A",
+            Enabled = _annotations.Count == 0,
+        };
+        fullSize.Click += (_, _) => SelectMonitor(Screen.FromRectangle(RectangleToScreen(_selection)));
+        menu.Items.Add(fullSize);
+        // The open menu has the keyboard: Ctrl+A shown next to Full size has to work here too.
+        menu.KeyDown += (_, e) =>
+        {
+            if (e.KeyData == (Keys.Control | Keys.A) && fullSize.Enabled)
+            {
+                e.Handled = e.SuppressKeyPress = true;
+                menu.Close();
+                fullSize.PerformClick();
+            }
+        };
         return menu;
     }
 
@@ -1444,13 +1463,15 @@ internal sealed class CaptureForm : Form
         RefreshVisual();
     }
 
-    private void SelectMonitorUnderCursor()
+    private void SelectMonitorUnderCursor() => SelectMonitor(Screen.FromPoint(MousePosition));
+
+    private void SelectMonitor(Screen screen)
     {
         if (_annotations.Count > 0)
             return;
         // A whole monitor is its own shape, so handles dragged afterwards shouldn't snap to the old ratio.
         SetAspect(null);
-        _selection = Rectangle.Intersect(RectangleToClient(Screen.FromPoint(MousePosition).Bounds), ClientRectangle);
+        _selection = Rectangle.Intersect(RectangleToClient(screen.Bounds), ClientRectangle);
         RefreshVisual();
     }
 

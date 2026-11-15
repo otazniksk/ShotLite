@@ -66,7 +66,7 @@ Text: klikni nástrojom Text do výberu, píš, potvrď `Enter` (`Shift+Enter` =
 
 ## Pomery strán
 
-Výber sa dá zamknúť na pomer strán, pre screenshoty aj nahrávky. Predvolené sú 9:16, 4:3 a 16:9. Zoznam aj predvolený pomer zmeníš v nastaveniach.
+Výber sa dá zamknúť na pomer strán, pre screenshoty aj nahrávky. Predvolené sú 9:16, 4:3 a 16:9. Zoznam aj predvolený pomer zmeníš v nastaveniach. **Celá obrazovka** v tom istom menu vyberie celý monitor, na ktorom je výber (alebo `Ctrl+A` pre monitor pod kurzorom).
 
 ## Rozpoznávanie textu (OCR)
 

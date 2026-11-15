@@ -31,6 +31,7 @@ internal static class Strings
     public static string RecordCursor => Localization.Get(nameof(RecordCursor));
     public static string ActionAspect => Localization.Get(nameof(ActionAspect));
     public static string AspectFree => Localization.Get(nameof(AspectFree));
+    public static string AspectFullSize => Localization.Get(nameof(AspectFullSize));
 
     // Notifications
     public static string Copied => Localization.Get(nameof(Copied));

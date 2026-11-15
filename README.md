@@ -66,7 +66,7 @@ Text: click inside the selection with the Text tool, type, confirm with `Enter` 
 
 ## Aspect ratios
 
-A selection can be locked to an aspect ratio, for screenshots and recordings alike. The presets are 9:16, 4:3 and 16:9. You can change the list and pick a default in the settings.
+A selection can be locked to an aspect ratio, for screenshots and recordings alike. The presets are 9:16, 4:3 and 16:9. You can change the list and pick a default in the settings. **Full size** in the same menu selects the whole monitor the selection is on (or `Ctrl+A` for the monitor under the cursor).
 
 ## Text recognition (OCR)
 
