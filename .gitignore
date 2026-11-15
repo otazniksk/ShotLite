@@ -20,3 +20,6 @@ Desktop.ini
 
 # Logs
 *.log
+
+# Local experiments (prototypes, scratch files)
+temp/
