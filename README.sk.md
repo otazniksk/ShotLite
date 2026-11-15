@@ -1,6 +1,6 @@
 # ShotLite
 
-[English](README.md) · **Slovenčina**
+[English](README.md) · **Slovenčina** · [Web](https://otazniksk.github.io/ShotLite/)
 
 Ľahký nástroj na screenshoty a nahrávanie obrazovky pre Windows. Vznikol ako náhrada za už nepodporovaný **Lightshot 5.5.0.7**. Má rovnaký spôsob práce (PrtScr → výber oblasti → kreslenie → kopírovať/uložiť), ale **bez telemetrie a bez nahrávania na prntscr.com**. Navyše vie nahrávať obrazovku do MP4 alebo GIF.
 

@@ -1,6 +1,6 @@
 # ShotLite
 
-**English** · [Slovak](README.sk.md)
+**English** · [Slovak](README.sk.md) · [Website](https://otazniksk.github.io/ShotLite/)
 
 A lightweight tool for screenshots and screen recording on Windows. It was created as a replacement for the no longer supported **Lightshot 5.5.0.7**. It works the same way (PrtScr → select an area → draw → copy/save), but **without telemetry and without uploading to prntscr.com**. On top of that it records the screen to MP4 or GIF.
 
