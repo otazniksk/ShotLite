@@ -603,7 +603,8 @@ internal sealed class CaptureForm : Form
             return;
 
         int button = S(32), pad = S(4), gap = S(8);
-        var area = RectangleToClient(Screen.FromRectangle(RectangleToScreen(_selection)).Bounds);
+        // The documentation generator's overlay is never shown: its scene is the whole monitor.
+        var area = _docsMode ? ClientRectangle : RectangleToClient(Screen.FromRectangle(RectangleToScreen(_selection)).Bounds);
         var vertical = _buttons.Where(b => b.Vertical).ToList();
         var horizontal = _buttons.Where(b => !b.Vertical).ToList();
 
@@ -1539,6 +1540,8 @@ internal sealed class CaptureForm : Form
 
     // ---------------------------------------------------------------- documentation (tools/DocShots)
 
+    private bool _docsMode;
+
     /// <summary>The frozen screenshot, for annotations that read its pixels (black-out).</summary>
     internal Bitmap DocsShot => _shot;
 
@@ -1547,6 +1550,7 @@ internal sealed class CaptureForm : Form
     internal void DocsSetState(Rectangle selection, IEnumerable<Annotation> annotations, Tool tool = Tool.None,
         ToolbarAction? hover = null, RedactStyle? redactStyle = null, bool creating = false)
     {
+        _docsMode = true;
         _selection = selection;
         _drag = creating ? DragMode.Creating : DragMode.None;
         _annotations.Clear();

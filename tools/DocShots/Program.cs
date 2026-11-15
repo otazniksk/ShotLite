@@ -10,7 +10,7 @@ namespace DocShots;
 /// Renders the wiki images from ShotLite's real UI over fictional HTML scenes (rendered by headless Edge).
 /// Usage (from the repository root, on Windows or WSL with the Windows .NET SDK):
 ///   dotnet run -c Release --project tools/DocShots -p:GitVersion=false -p:Version=&lt;latest release&gt; -- --out &lt;folder&gt;
-/// overview.gif, black-out.gif and text.gif go to docs/ for the README, the rest to the wiki.
+/// overview.gif, black-out.gif and text.gif go to docs/ for the README; all of them go to images/ in the wiki repository.
 /// GitVersion=false and Version give the settings header a clean version instead of the branch build label.
 /// Everything is drawn in code at 100 % scaling, so the images look the same every time.
 /// </summary>
@@ -36,11 +36,12 @@ internal static class Program
         var shots = new Shots(output);
 
         shots.Tools(article);
-        shots.Settings();
         shots.SelectArrowCopyGif(articleNarrow);
         shots.BlackOutGif(accountNarrow);
         shots.OverviewGif(articleTall);
         shots.TextGif(articleTall);
+        shots.AspectGif(articleTall);
+        shots.SettingsTabs();
 
         Console.WriteLine($"Done: {output}");
         return 0;
@@ -124,23 +125,6 @@ internal sealed class Shots
         form.DocsSetState(selection, [frame, arrow, marker, pencil, text], Tool.Arrow, hover: ToolbarAction.Arrow);
         using var image = form.DocsRender();
         Save(image, "editor-tools.png");
-    }
-
-    /// <summary>The settings window with default settings (nothing from the PC it runs on).</summary>
-    public void Settings()
-    {
-        using var icon = AppIcon.Load(SystemInformation.IconSize);
-        using var form = new SettingsForm(new AppSettings(), icon) { StartPosition = FormStartPosition.Manual, Location = new Point(-4000, -4000) };
-        form.Show();
-        Application.DoEvents();
-        using var window = new Bitmap(form.Width, form.Height, PixelFormat.Format24bppRgb);
-        form.DrawToBitmap(window, new Rectangle(Point.Empty, form.Size));
-        // Only the client area: DrawToBitmap paints the title bar in an old style that doesn't match Windows 11.
-        var origin = form.PointToScreen(Point.Empty);
-        var client = new Rectangle(origin.X - form.Left, origin.Y - form.Top, form.ClientSize.Width, form.ClientSize.Height);
-        form.Close();
-        using var image = window.Clone(client, PixelFormat.Format24bppRgb);
-        Save(image, "settings.png");
     }
 
     /// <summary>PrtScr → drag a selection → draw an arrow → copy, with a visible mouse cursor.</summary>
@@ -305,6 +289,100 @@ internal sealed class Shots
         Console.WriteLine("  text.gif");
     }
 
+    /// <summary>
+    /// Aspect ratio: hold the ratio button, pick 16:9 (the selection takes the shape, keeping its height and center),
+    /// then hold it again and pick Full size (the whole monitor).
+    /// </summary>
+    public void AspectGif(Bitmap scene)
+    {
+        using var form = Overlay(scene);
+        var start = new Point(150, 170);
+        var end = new Point(520, 470);
+        var selection = Rectangle.FromLTRB(start.X, start.Y, end.X, end.Y);
+        var done = new List<Annotation>();
+
+        using var gif = new GifWriter(Path.Combine(_output, "aspect-ratio.gif"), new Rectangle(Point.Empty, scene.Size));
+        var cursor = SelectArea(form, gif, new Point(400, 420), start, end);
+
+        // 16:9 (menu: Free, 9:16, 4:3, 16:9, separator, Full size).
+        var wide = new AspectRatio(16, 9);
+        cursor = ChooseFromMenu(form, gif, ToolbarAction.Aspect, 3, cursor,
+            setState: hover => form.DocsSetState(selection, done, hover: hover ? ToolbarAction.Aspect : null),
+            choose: () => form.DocsSetOptions(aspect: wide));
+        // As SetAspect: whole steps of the ratio, the height kept, the center kept.
+        int steps = selection.Height / wide.StepHeight;
+        int width = steps * wide.StepWidth, height = steps * wide.StepHeight;
+        var shaped = new Rectangle(selection.Left + selection.Width / 2 - width / 2, selection.Top + selection.Height / 2 - height / 2, width, height);
+        selection = Morph(form, gif, cursor, selection, shaped, done);
+
+        // Full size.
+        cursor = ChooseFromMenu(form, gif, ToolbarAction.Aspect, 5, cursor,
+            setState: hover => form.DocsSetState(selection, done, hover: hover ? ToolbarAction.Aspect : null),
+            choose: () => form.DocsSetOptions(freeAspect: true));
+        selection = Morph(form, gif, cursor, selection, new Rectangle(Point.Empty, scene.Size), done);
+        gif.Add(form, cursor, Cursors.Default, frames: 25);
+        Console.WriteLine("  aspect-ratio.gif");
+    }
+
+    /// <summary>The selection changes shape over a few frames, the cursor stays.</summary>
+    private static Rectangle Morph(CaptureForm form, GifWriter gif, Point cursor, Rectangle from, Rectangle to, List<Annotation> done)
+    {
+        for (int i = 1; i <= 6; i++)
+        {
+            float t = Ease(i / 6f);
+            var a = Lerp(from.Location, to.Location, t);
+            var b = Lerp(new Point(from.Right, from.Bottom), new Point(to.Right, to.Bottom), t);
+            form.DocsSetState(Rectangle.FromLTRB(a.X, a.Y, b.X, b.Y), done);
+            gif.Add(form, cursor, Cursors.Default);
+        }
+        gif.Add(form, cursor, Cursors.Default, frames: 10);
+        return to;
+    }
+
+    /// <summary>Every tab of the settings window with default settings (nothing from the PC it runs on).</summary>
+    public void SettingsTabs()
+    {
+        using var icon = AppIcon.Load(SystemInformation.IconSize);
+        // The folders of a made-up user, not the real paths of the PC it runs on.
+        var settings = new AppSettings { SaveFolder = @"C:\Users\Example\Pictures\ShotLite", RecordFolder = @"C:\Users\Example\Videos\ShotLite" };
+        using var form = new SettingsForm(settings, icon) { StartPosition = FormStartPosition.Manual, Location = new Point(-4000, -4000) };
+        form.Show();
+        Application.DoEvents();
+        var tabs = Descendants(form).OfType<TabControl>().Single();
+        // By title: the Video tab is missing where Windows can't record.
+        var names = new Dictionary<string, string>
+        {
+            [Strings.SectionGeneral] = "general",
+            [Strings.SectionHotkeys] = "shortcuts",
+            [Strings.TabScreenshots] = "screenshots",
+            [Strings.TabVideo] = "video",
+            [Strings.TabServer] = "server",
+        };
+        for (int i = 0; i < tabs.TabCount; i++)
+        {
+            tabs.SelectedIndex = i;
+            Application.DoEvents();
+            using var window = new Bitmap(form.Width, form.Height, PixelFormat.Format24bppRgb);
+            form.DrawToBitmap(window, new Rectangle(Point.Empty, form.Size));
+            // Only the client area: DrawToBitmap paints the title bar in an old style that doesn't match Windows 11.
+            var origin = form.PointToScreen(Point.Empty);
+            var client = new Rectangle(origin.X - form.Left, origin.Y - form.Top, form.ClientSize.Width, form.ClientSize.Height);
+            using var image = window.Clone(client, PixelFormat.Format24bppRgb);
+            Save(image, $"settings-{names[tabs.TabPages[i].Text]}.png");
+        }
+        form.Close();
+    }
+
+    private static IEnumerable<Control> Descendants(Control parent)
+    {
+        foreach (Control child in parent.Controls)
+        {
+            yield return child;
+            foreach (var grandchild in Descendants(child))
+                yield return grandchild;
+        }
+    }
+
     /// <summary>The sizes in the Text button's menu (CaptureForm.TextSizes).</summary>
     private static readonly int[] TextSizes = { 10, 12, 14, 16, 20, 24, 32, 48, 64 };
 
@@ -332,11 +410,21 @@ internal sealed class Shots
         using (var menu = form.DocsMenu(action))
         {
             using var closed = RenderMenu(menu, selected: null);
-            var bar = form.DocsToolBar;
-            int x = buttonBounds.Left - bar.Width > 0 ? bar.Left - closed.Width : bar.Right;
-            // Windows opens the menu upwards when it doesn't fit below.
-            int y = Math.Min(buttonBounds.Top, form.ClientSize.Height - closed.Height);
-            var at = new Point(x, y);
+            Point at;
+            var actionBar = form.DocsActionBar;
+            if (actionBar.Contains(Center(buttonBounds)))
+            {
+                // ShowBarMenu: under the action bar, or above it where there's no room.
+                bool roomBelow = actionBar.Bottom + closed.Height < form.ClientSize.Height;
+                at = new Point(buttonBounds.Left, roomBelow ? actionBar.Bottom : actionBar.Top - closed.Height);
+            }
+            else
+            {
+                // ShowSideMenu; Windows opens the menu upwards when it doesn't fit below.
+                var bar = form.DocsToolBar;
+                int x = buttonBounds.Left - bar.Width > 0 ? bar.Left - closed.Width : bar.Right;
+                at = new Point(x, Math.Min(buttonBounds.Top, form.ClientSize.Height - closed.Height));
+            }
             setState(false);
             gif.Add(form, cursor, Cursors.Default, frames: 5, overlay: (closed, at));
 
