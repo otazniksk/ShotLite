@@ -6,7 +6,7 @@ namespace ShotLite;
 
 internal enum Tool { None, Pencil, Line, Arrow, Rectangle, Redact, Marker, Text }
 
-internal enum ToolbarAction { Pencil, Line, Arrow, Rectangle, Redact, Marker, Text, Color, Undo, Aspect, Record, Upload, Print, Copy, Save, Close }
+internal enum ToolbarAction { Pencil, Line, Arrow, Rectangle, Redact, Marker, Text, Color, Undo, Aspect, Record, Upload, Print, Ocr, Copy, Save, Close }
 
 internal sealed class ToolbarButton
 {
@@ -57,7 +57,7 @@ internal sealed class CaptureForm : Form
     private Rectangle _verticalBar, _horizontalBar;
     private Rectangle _lastVisual;
     private Rectangle? _hintBounds;
-    private Font? _uiFont, _iconFont, _iconTextFont, _aspectFont;
+    private Font? _uiFont, _iconFont, _iconTextFont, _aspectFont, _ocrFont;
     private RedactStyle _redactStyle;
     private readonly System.Windows.Forms.Timer _holdTimer = new() { Interval = 350 };
     private ToolbarAction? _pressed;
@@ -122,6 +122,7 @@ internal sealed class CaptureForm : Form
             if (settings.Upload.IsConfigured)
                 AddButton(ToolbarAction.Upload, Strings.ActionUpload, vertical: false);
             AddButton(ToolbarAction.Print, Strings.ActionPrint, vertical: false);
+            AddButton(ToolbarAction.Ocr, Strings.ActionOcr, vertical: false);
             AddButton(ToolbarAction.Copy, Strings.ActionCopy, vertical: false);
             AddButton(ToolbarAction.Save, Strings.ActionSave, vertical: false);
         }
@@ -137,6 +138,7 @@ internal sealed class CaptureForm : Form
     private Font IconFont => _iconFont ??= new Font("Segoe MDL2 Assets", S(16), FontStyle.Regular, GraphicsUnit.Pixel);
     private Font IconTextFont => _iconTextFont ??= new Font("Segoe UI", S(17), FontStyle.Bold, GraphicsUnit.Pixel);
     private Font AspectFont => _aspectFont ??= new Font("Segoe UI", S(10), FontStyle.Bold, GraphicsUnit.Pixel);
+    private Font OcrFont => _ocrFont ??= new Font("Segoe UI", S(9), FontStyle.Bold, GraphicsUnit.Pixel);
 
     private int S(int value) => (int)Math.Round(value * DeviceDpi / 96.0);
 
@@ -202,6 +204,7 @@ internal sealed class CaptureForm : Form
             _iconFont?.Dispose();
             _iconTextFont?.Dispose();
             _aspectFont?.Dispose();
+            _ocrFont?.Dispose();
             foreach (var annotation in _annotations.OfType<IDisposable>())
                 annotation.Dispose();
         }
@@ -395,6 +398,7 @@ internal sealed class CaptureForm : Form
             case ToolbarAction.Undo: Glyph(g, "", bounds, _annotations.Count > 0 ? foreground : Color.Silver); break;
             case ToolbarAction.Upload: Glyph(g, "", bounds, foreground); break;
             case ToolbarAction.Print: Glyph(g, "", bounds, foreground); break;
+            case ToolbarAction.Ocr: DrawOcrGlyph(g, bounds, foreground); break;
             case ToolbarAction.Copy: Glyph(g, "", bounds, foreground); break;
             case ToolbarAction.Save: Glyph(g, "", bounds, foreground); break;
             case ToolbarAction.Close: Glyph(g, "", bounds, foreground); break;
@@ -478,6 +482,21 @@ internal sealed class CaptureForm : Form
                     g.FillRectangle(block, r);
                 break;
         }
+    }
+
+    /// <summary>"OCR" inside scanner corners.</summary>
+    private void DrawOcrGlyph(Graphics g, Rectangle bounds, Color color)
+    {
+        TextRenderer.DrawText(g, "OCR", OcrFont, bounds, color,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+
+        var frame = Rectangle.Inflate(bounds, -S(2), -S(7));
+        int l = S(4);
+        using var pen = new Pen(color, Math.Max(1.5f, S(1) * 1.5f)) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+        g.DrawLines(pen, new Point[] { new(frame.Left, frame.Top + l), new(frame.Left, frame.Top), new(frame.Left + l, frame.Top) });
+        g.DrawLines(pen, new Point[] { new(frame.Right - l, frame.Top), new(frame.Right, frame.Top), new(frame.Right, frame.Top + l) });
+        g.DrawLines(pen, new Point[] { new(frame.Left, frame.Bottom - l), new(frame.Left, frame.Bottom), new(frame.Left + l, frame.Bottom) });
+        g.DrawLines(pen, new Point[] { new(frame.Right - l, frame.Bottom), new(frame.Right, frame.Bottom), new(frame.Right, frame.Bottom - l) });
     }
 
     private void Glyph(Graphics g, string glyph, Rectangle bounds, Color color) =>
@@ -1154,6 +1173,7 @@ internal sealed class CaptureForm : Form
             case ToolbarAction.Undo: Undo(); break;
             case ToolbarAction.Upload: UploadAndClose(); break;
             case ToolbarAction.Print: PrintAndClose(); break;
+            case ToolbarAction.Ocr: CopyTextAndClose(); break;
             case ToolbarAction.Copy: CopyAndClose(); break;
             case ToolbarAction.Save: SaveAndClose(); break;
             case ToolbarAction.Close: Close(); break;
@@ -1381,6 +1401,15 @@ internal sealed class CaptureForm : Form
         Close();
     }
 
+    private void CopyTextAndClose()
+    {
+        if (!HasSelection)
+            return;
+        var image = RenderResult();
+        Close();
+        _ = _actions.CopyTextAsync(image);
+    }
+
     private void SaveAndClose()
     {
         if (!HasSelection)
@@ -1450,6 +1479,7 @@ internal sealed class CaptureForm : Form
             case Keys.V: ToggleAspect(); break;
             case Keys.Enter:
             case Keys.Control | Keys.C: CopyAndClose(); break;
+            case Keys.Control | Keys.Shift | Keys.C: CopyTextAndClose(); break;
             case Keys.Control | Keys.S: SaveAndClose(); break;
             case Keys.Control | Keys.P: PrintAndClose(); break;
             case Keys.Control | Keys.U: UploadAndClose(); break;

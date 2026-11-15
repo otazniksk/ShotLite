@@ -46,6 +46,40 @@ internal sealed class ImageActions
         }
     }
 
+    /// <summary>Recognizes the text in the image and puts it in the clipboard. Takes ownership of the image.</summary>
+    public async Task CopyTextAsync(Bitmap image)
+    {
+        using (image)
+        {
+            var engine = TextRecognizer.CreateEngine();
+            if (engine == null)
+            {
+                _notifier.Error(Strings.OcrUnavailable);
+                return;
+            }
+
+            try
+            {
+                var text = await TextRecognizer.RecognizeAsync(engine, image);
+                if (text.Length == 0)
+                {
+                    _notifier.Show(Strings.NoTextFound, force: true);
+                    return;
+                }
+                Clipboard.SetText(text);
+                _notifier.Show(Strings.TextCopied);
+            }
+            catch (ExternalException ex)
+            {
+                _notifier.Error(string.Format(Strings.CopyFailed, ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _notifier.Error(string.Format(Strings.OcrFailed, ex.Message));
+            }
+        }
+    }
+
     /// <summary>Saves via dialog (or straight to the folder when auto-save is on). Returns the path, or null if cancelled.</summary>
     public string? Save(Bitmap image, IWin32Window? owner)
     {

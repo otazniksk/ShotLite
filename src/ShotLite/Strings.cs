@@ -22,6 +22,7 @@ internal static class Strings
     public static string ActionUpload => Localization.Get(nameof(ActionUpload));
     public static string ActionPrint => Localization.Get(nameof(ActionPrint));
     public static string ActionCopy => Localization.Get(nameof(ActionCopy));
+    public static string ActionOcr => Localization.Get(nameof(ActionOcr));
     public static string ActionSave => Localization.Get(nameof(ActionSave));
     public static string ActionClose => Localization.Get(nameof(ActionClose));
     public static string ActionRecord => Localization.Get(nameof(ActionRecord));
@@ -34,6 +35,10 @@ internal static class Strings
     // Notifications
     public static string Copied => Localization.Get(nameof(Copied));
     public static string CopyFailed => Localization.Get(nameof(CopyFailed));
+    public static string TextCopied => Localization.Get(nameof(TextCopied));
+    public static string NoTextFound => Localization.Get(nameof(NoTextFound));
+    public static string OcrUnavailable => Localization.Get(nameof(OcrUnavailable));
+    public static string OcrFailed => Localization.Get(nameof(OcrFailed));
     public static string Saved => Localization.Get(nameof(Saved));
     public static string SaveFailed => Localization.Get(nameof(SaveFailed));
     public static string PrintFailed => Localization.Get(nameof(PrintFailed));
