@@ -16,7 +16,7 @@
 
 Windows 10/11 x64. .NET je súčasťou balíka. Nahrávanie obrazovky vyžaduje Windows 10 verzie 2004 alebo novší.
 
-Nainštalovaná aplikácia ponúkne novú verziu v menu v lište a nainštaluje ju jedným kliknutím, alebo automaticky, ak si to zapneš v nastaveniach. Každá aktualizácia sa pred spustením overí digitálnym podpisom. Prenosná verzia namiesto toho otvorí stránku na stiahnutie.
+Nainštalovaná aplikácia ponúkne novú verziu v menu v lište. Prvým kliknutím ju stiahneš (menu ukazuje priebeh), druhým na Reštartovať a aktualizovať ju nainštaluješ a spustí sa nová verzia. Alebo všetko prebehne automaticky, ak si to zapneš v nastaveniach. Každá aktualizácia sa pred spustením overí digitálnym podpisom. Prenosná verzia namiesto toho otvorí stránku na stiahnutie.
 
 ## Ovládanie
 
