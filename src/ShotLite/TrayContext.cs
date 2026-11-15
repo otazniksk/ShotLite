@@ -26,6 +26,14 @@ internal sealed class TrayContext : ApplicationContext
     private readonly ToolStripMenuItem _settingsItem;
     private readonly ToolStripMenuItem _aboutItem;
     private readonly ToolStripMenuItem _exitItem;
+    /// <summary>Shown while Windows takes PrtScr for its own screen capture; fixes it after the user agrees.</summary>
+    private readonly ToolStripMenuItem _fixPrintScreenItem;
+    private readonly ToolStripSeparator _fixPrintScreenSeparator = new() { Visible = false };
+    private bool _askingPrintScreen;
+    /// <summary>"No" holds for this run; the red menu item stays and the next start asks again.</summary>
+    private bool _printScreenDeclined;
+    /// <summary>The shortcuts the last <see cref="RegisterHotkeys"/> couldn't register, for a message.</summary>
+    private string _hotkeyFailure = "";
     private readonly ToolStripMenuItem _updateItem;
     /// <summary>A real button in the menu once the update is downloaded; it replaces <see cref="_updateItem"/>.</summary>
     private readonly Button _restartButton = new()
@@ -70,6 +78,12 @@ internal sealed class TrayContext : ApplicationContext
         _settingsItem = new ToolStripMenuItem(null, null, (_, _) => ShowSettings());
         _aboutItem = new ToolStripMenuItem(null, null, (_, _) => ShowAbout());
         _exitItem = new ToolStripMenuItem(null, null, (_, _) => ExitThread());
+        _fixPrintScreenItem = new ToolStripMenuItem(null, null, (_, _) => FixPrintScreen(automatic: false))
+        {
+            Visible = false,
+            ForeColor = UpdateRed,
+        };
+        _fixPrintScreenItem.Font = new Font(_fixPrintScreenItem.Font, FontStyle.Bold);
         _updateItem = new ToolStripMenuItem(null, null, (_, _) => OnUpdateClicked())
         {
             Visible = false,
@@ -104,6 +118,8 @@ internal sealed class TrayContext : ApplicationContext
         menu.Items.AddRange(new ToolStripItem[]
         {
             _restartHost,
+            _fixPrintScreenItem,
+            _fixPrintScreenSeparator,
             _updateItem,
             _updateSeparator,
             _captureItem,
@@ -304,6 +320,7 @@ internal sealed class TrayContext : ApplicationContext
         _settingsItem.Text = Strings.MenuSettings;
         _aboutItem.Text = Strings.MenuAbout;
         _exitItem.Text = Strings.MenuExit;
+        _fixPrintScreenItem.Text = Strings.MenuFixPrintScreen;
         if (_update != null)
         {
             var label = UpdateInstaller.CanInstall ? Strings.MenuInstallUpdate : Strings.MenuUpdateAvailable;
@@ -331,6 +348,9 @@ internal sealed class TrayContext : ApplicationContext
 
     private void OnHotkey(int id)
     {
+        // The PrtScr question runs its own message loop; a capture now would include it or cover it.
+        if (_askingPrintScreen)
+            return;
         if (id == RecordHotkeyId)
         {
             ToggleRecording();
@@ -498,27 +518,105 @@ internal sealed class TrayContext : ApplicationContext
         if (ScreenRecorder.IsSupported)
             Register(RecordHotkeyId, _settings.HotkeyRecord, Strings.HotkeyRecord, _recordItem);
 
-        if (failed.Count > 0)
+        _hotkeyFailure = string.Join(", ", failed);
+
+        // First, so a PrtScr that Windows still holds leads to the fix instead of a generic failure.
+        bool usesPrintScreen = _settings.HotkeyCapture.Enabled && (_settings.HotkeyCapture.Keys & Keys.KeyCode) == Keys.PrintScreen;
+        bool conflict = usesPrintScreen && Autostart.PrintScreenOpensSnippingTool();
+        _fixPrintScreenItem.Available = _fixPrintScreenSeparator.Available = conflict;
+        if (conflict)
         {
+            // A dialog, not a balloon: notifications may be turned off, and without the fix PrtScr doesn't work.
             if (!quiet)
-                _notifier.Error(string.Format(Strings.HotkeyFailed, string.Join(", ", failed)));
+                Deferred(() => FixPrintScreen(automatic: true));
             return false;
         }
 
-        bool usesPrintScreen = (_settings.HotkeyCapture.Keys & Keys.KeyCode) == Keys.PrintScreen;
-        if (usesPrintScreen && Autostart.PrintScreenOpensSnippingTool())
+        if (failed.Count > 0)
         {
             if (!quiet)
-                _notifier.Error(Strings.SnippingWarning);
+                _notifier.Error(string.Format(Strings.HotkeyFailed, _hotkeyFailure));
             return false;
         }
         return true;
     }
 
-    /// <summary>Runs the action after the tray menu has closed, so the menu isn't captured.</summary>
-    private static void Deferred(Action action)
+    /// <summary>After the user agrees, turns off Windows' own PrtScr capture so the key reaches ShotLite.</summary>
+    /// <param name="automatic">Asked by ShotLite, not clicked: it waits for a calm moment and respects an earlier "No".</param>
+    private void FixPrintScreen(bool automatic)
     {
-        var timer = new System.Windows.Forms.Timer { Interval = 200 };
+        if (_askingPrintScreen || !_fixPrintScreenItem.Available)
+            return;
+        if (automatic && (_printScreenDeclined || _overlay != null || _settingsOpen || _recording != null))
+            return;
+        _askingPrintScreen = true;
+        try
+        {
+            if (ShowTopMost(Strings.SnippingFixQuestion, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            {
+                _printScreenDeclined = true;
+                return;
+            }
+            try
+            {
+                Autostart.DisablePrintScreenSnipping();
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or IOException)
+            {
+                ShowTopMost(string.Format(Strings.SnippingFixFailed, ex.Message), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            RegisterAfterSnippingFix(attempt: 0);
+        }
+        finally
+        {
+            _askingPrintScreen = false;
+        }
+    }
+
+    /// <summary>
+    /// Windows releases PrtScr a moment after its setting is turned off, not at once, so the first
+    /// registration can fail; retries for a few seconds and reports in a dialog (balloons may be off).
+    /// </summary>
+    private void RegisterAfterSnippingFix(int attempt)
+    {
+        // Open settings release the hotkeys while a shortcut box records: wait until they close, then go on.
+        if (_settingsOpen)
+        {
+            Deferred(() => RegisterAfterSnippingFix(attempt), 500);
+            return;
+        }
+        if (RegisterHotkeys(quiet: true))
+            _notifier.Show(Strings.SnippingFixed, force: true);
+        else if (attempt < 10)
+            Deferred(() => RegisterAfterSnippingFix(attempt + 1), 500);
+        else
+        {
+            _askingPrintScreen = true;
+            try
+            {
+                ShowTopMost(string.Format(Strings.HotkeyFailed, _hotkeyFailure), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                _askingPrintScreen = false;
+            }
+        }
+    }
+
+    /// <summary>A tray app has no window to own a message box, so it could open behind other windows.</summary>
+    private static DialogResult ShowTopMost(string text, MessageBoxButtons buttons, MessageBoxIcon icon)
+    {
+        using var owner = new Form { TopMost = true, ShowInTaskbar = false, FormBorderStyle = FormBorderStyle.None, Size = Size.Empty, StartPosition = FormStartPosition.CenterScreen, Opacity = 0 };
+        owner.Show();
+        owner.Activate();
+        return MessageBox.Show(owner, text, Strings.AppName, buttons, icon);
+    }
+
+    /// <summary>Runs the action after the tray menu has closed, so the menu isn't captured.</summary>
+    private static void Deferred(Action action, int milliseconds = 200)
+    {
+        var timer = new System.Windows.Forms.Timer { Interval = milliseconds };
         timer.Tick += (_, _) =>
         {
             timer.Dispose();
